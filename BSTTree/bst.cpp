@@ -7,22 +7,26 @@ BSTNode<Type>::BSTNode(
           const BSTNode* left, 
           const BSTNode* right
 ): element(elem), left(const_cast<BSTNode<Type>*>(left)), right(const_cast<BSTNode<Type>*>(right)) 
-{ std::cout << "Construct BSTNode element " << element << std::endl; }
+{ // std::cout << "Construct BSTNode element " << element << std::endl; 
+}
 
 template <typename Type>
 BSTNode<Type>::BSTNode(const BSTNode* node):
 element(node->element), left(node->left), right(node->right)
-{ std::cout << "Copy from a pointer element " << element << std::endl; }
+{ // std::cout << "Copy from a pointer element " << element << std::endl; 
+}
 
 template <typename Type>
 BSTNode<Type>::BSTNode(const BSTNode& node): 
 element(node.element), left(node.left), right(node.right)
-{ std::cout << "Copy from a reference element " << element << std::endl; }
+{ // std::cout << "Copy from a reference element " << element << std::endl; 
+}
 
 template <typename Type>
 BSTNode<Type>::BSTNode(const BSTNode&& node): 
 element(std::move(node.element)), left(std::move(node.left)), right(std::move(node.right)) 
-{ std::cout << "Copy from a rvalue element " << element << std::endl; }
+{ // std::cout << "Copy from a rvalue element " << element << std::endl; 
+}
 
 template <typename Type>
 void BSTNode<Type>::clear() { 
@@ -50,7 +54,7 @@ template <typename Type>
 BSTNode<Type>::~BSTNode() {
           // if (left != nullptr) BSTNode::release_node(left);
           // if (right != nullptr) BSTNode::release_node(right);
-          std::cout << "Release BSTNode element " << element << std::endl;
+          // std::cout << "Release BSTNode element " << element << std::endl;
 }
 
 

@@ -264,29 +264,38 @@ void tree_test() {
                     for (auto x : arr1) std::cout << x << " ";
                     std::cout << std::endl;
           }
+
+          {
+                    BSTTree<std::vector<int>> bst1;
+                    bst1.customize([](const std::vector<int>& x, const std::vector<int>& y){
+                              return x[0] > y[0];
+                    });
+                    bst1.insert(std::vector<int>{1,2});
+                    bst1.insert(std::vector<int>{2,3});
+                    bst1.insert(std::vector<int>{3,4});
+                    
+                    std::vector<std::vector<int>> arr = bst1.to_array();
+                    for (auto each : arr) 
+                    std::cout << each[0] << " " << each[1] << std::endl;
+          }
 }
 
 void func_test() {
-          BSTTree<int> bst1;
-          bst1.insert(6);
-          bst1.insert(3);
-          bst1.insert(8);
-          bst1.insert(1);
-          bst1.insert(4);
-
-          std::vector<int> arr1 = bst1.to_array();
-          for (auto x : arr1) std::cout << x << " ";
-          std::cout << std::endl;
-
-          BSTTree<int> bst2;
-          bst1.insert(6);
-          bst1.insert(3);
-          bst1.insert(8);
-          bst1.insert(1);
-          bst1.insert(4);
+          BSTTree<std::vector<int>> bst1;
+          bst1.customize([](const std::vector<int>& x, const std::vector<int>& y){
+                    return x[0] > y[0];
+          });
+          bst1.insert(std::vector<int>{1,2});
+          bst1.insert(std::vector<int>{2,3});
+          bst1.insert(std::vector<int>{3,4});
+          
+          std::vector<std::vector<int>> arr = bst1.to_array();
+          for (auto each : arr) 
+          std::cout << each[0] << " " << each[1] << std::endl;
 }
 
 int main() {
-          // node_test();
+          node_test();
           tree_test();
+          func_test();
 }
