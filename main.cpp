@@ -89,6 +89,8 @@ void tree_test() {
            *    3     8
            *   / \
            *  1   4
+           * 
+           * 
            *       \
            *        5
            */
@@ -216,9 +218,75 @@ void tree_test() {
 
           delete bst;
           }
+
+          {
+
+                    printf("@@@\n");
+                    BSTTree<int> bst1;
+                    bst1.insert(6);
+                    bst1.insert(3);
+                    bst1.insert(8);
+                    bst1.insert(1);
+                    bst1.insert(4);
+
+                    std::vector<int> arr1 = bst1.to_array();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+                    arr1 = bst1.serilize();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+
+                    BSTTree<int>::iterator iter = bst1.end();
+                    iter--;
+                    bst1.erase(iter);
+
+                    arr1 = bst1.to_array();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+                    arr1 = bst1.serilize();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+
+                    bst1.customize([](const int& x, const int& y){ return x < y; });
+
+                    arr1 = bst1.to_array();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+                    arr1 = bst1.serilize();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+
+                    bst1.customize([](const int& x, const int& y){ return x > y; });
+                    arr1 = bst1.to_array();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+                    arr1 = bst1.serilize();
+                    for (auto x : arr1) std::cout << x << " ";
+                    std::cout << std::endl;
+          }
+}
+
+void func_test() {
+          BSTTree<int> bst1;
+          bst1.insert(6);
+          bst1.insert(3);
+          bst1.insert(8);
+          bst1.insert(1);
+          bst1.insert(4);
+
+          std::vector<int> arr1 = bst1.to_array();
+          for (auto x : arr1) std::cout << x << " ";
+          std::cout << std::endl;
+
+          BSTTree<int> bst2;
+          bst1.insert(6);
+          bst1.insert(3);
+          bst1.insert(8);
+          bst1.insert(1);
+          bst1.insert(4);
 }
 
 int main() {
-          node_test();
+          // node_test();
           tree_test();
 }

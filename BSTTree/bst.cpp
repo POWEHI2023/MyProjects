@@ -84,6 +84,10 @@ template <typename T, BST::CMP cmp>
 bool BSTTree<T, cmp>::operator==(const BSTTree& bst) 
 { return root == bst.root; }
 
+template <typename T>
+inline bool node_exist(typename BSTNode<T>::node& node)
+{ return node != nullptr && !node->destroyed; }
+
 template <typename T, BST::CMP cmp>
 bool BSTTree<T, cmp>::insert(const T& elem) {
           bool old_moditied = modified;
@@ -98,7 +102,13 @@ bool BSTTree<T, cmp>::insert(const T& elem) {
 
                     BEGIN: 
                     if (fn(node->element, elem)) {
-                              if (node->left == nullptr || node->left->destroyed) {
+                              if (!node_exist<T>(node->left)) {
+                                        if (node->left != nullptr) {
+                                                  // typename BSTNode<T>::node temp = node->left;
+                                                  node->left = nullptr;
+                                                  // temp.reset();
+                                        }
+
                                         node->left = BSTNode<T>::create_node(elem);
                                         // Links for fast iterator
                                         node->left->before = node->before;
@@ -107,13 +117,19 @@ bool BSTTree<T, cmp>::insert(const T& elem) {
 
                                         node->before = node->left.get();
                                         node->left->next = node.get();
-                                        return (modified = (node->left != nullptr));
+                                        return (modified = (node_exist<T>(node->left)));
                               } else {
                                         node = node->left;
                                         goto BEGIN;
                               }
                     } else {
-                              if (node->right == nullptr || node->right->destroyed) {
+                              if (!node_exist<T>(node->right)) {
+                                        if (node->right != nullptr) {
+                                                  // typename BSTNode<T>::node temp = node->right;
+                                                  node->right = nullptr;
+                                                  // temp.reset();
+                                        }
+                                        
                                         node->right = BSTNode<T>::create_node(elem);
                                         // Links for fase iterator
                                         node->right->next = node->next;
@@ -122,7 +138,7 @@ bool BSTTree<T, cmp>::insert(const T& elem) {
 
                                         node->next = node->right.get();
                                         node->right->before = node.get();
-                                        return (modified = (node->right != nullptr));
+                                        return (modified = (node_exist<T>(node->right)));
                               } else {
                                         node = node->right;
                                         goto BEGIN;
@@ -143,38 +159,59 @@ bool BSTTree<T, cmp>::erase_root(typename BSTNode<T>::node& root) {
           typename BSTNode<T>::node node = root;
           if (node->left != nullptr) {
                     node = node->left;
-                    while (node->right != nullptr) node = node->right;
-                    node->right = root->right;
+                    while (node_exist<T>(node->right)) node = node->right;
+                    if (node->right != nullptr) {
+                              // typename BSTNode<T>::node temp = node->right;
+                              node->right = nullptr;
+                              // temp.reset();
+                    }
+                    // node->right = root->right;
+
+                    // std::cout << "Right element " << node->element << std::endl;
                     // Update links
-                    if (root->right != nullptr) {
+                    if (node_exist<T>(root->right)) {
+                              node->right = root->right;
+
                               typename BSTNode<T>::node n = root->right;
-                              while (n->left != nullptr) n = n->left;
-                              assert(node->next == n.get() && n->before == node.get());
+                              while (node_exist<T>(n->left)) n = n->left;
+
+                              // std::cout << "Left element " << n->element << std::endl;
+                              // assert(node->next == n.get() && n->before == node.get());
                               node->next = n.get();
                               n->before = node.get();
                     } else {
+                              if (root->right != nullptr) {
+                                        // typename BSTNode<T>::node temp = node->right;
+                                        root->right = nullptr;
+                                        // temp.reset();
+                              }
                               node->next = root->next;
                               if (root->next != nullptr) root->next->before = node.get();
                     }
                     
+                    // node = root;
+                    // printf("RESETED\n");
                     root = root->left;
+                    // node.reset();
           }
           else {
-                    if (root->right == nullptr) {
+                    if (!node_exist<T>(root->right)) {
                               if (root->before != nullptr) root->before->next = root->next;
                               if (root->next != nullptr) root->next->before = root->before;
                               root->destroyed = true;
                     } else {
                               // Update links
                               node = root->right;
-                              while (node->left) node = node->left;
+                              while (node_exist<T>(node->left)) node = node->left;
 
                               assert(root->next == node.get() && node->before == root.get());
 
                               node->before = root->before;
                               if (root->before != nullptr) root->before->next = node.get();
 
+                              // node = root;
                               root = root->right;
+                              // node.reset();
                     }
           }
 
@@ -189,7 +226,7 @@ bool BSTTree<T, cmp>::erase(const iterator& iter) {
           if (root.get() == iter.crt) erase_root(root);
           else {
                     typename BSTNode<T>::node node = root;
-                    while (node != nullptr) {
+                    while (node_exist<T>(node)) {
                               if (fn(node->element, iter.crt->element)) 
                               if (node->left.get() == iter.crt) {
                                         modified = erase_root(node->left);
@@ -351,5 +388,39 @@ const std::vector<T> BSTTree<T, cmp>::serilize() {
                               while (s.top()->left != nullptr && !s.top()->left->destroyed) s.push(s.top()->left);
                     }
           }
+          return std::move(ret);
+}
+
+template <typename T, BST::CMP cmp>
+bool BSTTree<T, cmp>::customize(std::function<bool(const T&, const T&)> f) { 
+          this->fn = f; 
+          if (root == nullptr) return true;
+
+          std::vector<T> arr;
+          std::vector<typename BSTNode<T>::node> s1;
+
+          s1.push_back(root);
+          while (s1.size() != 0) {
+                    std::vector<typename BSTNode<T>::node> s2;
+                    for (auto each : s1) {
+                              arr.push_back(each->element);
+
+                              if (each->left != nullptr && !each->left->destroyed)
+                              s2.push_back(each->left);
+                              if (each->right != nullptr && !each->right->destroyed)
+                              s2.push_back(each->right);
+                    }
+                    s1 = std::move(s2);
+          }
+
+          // root.reset();
+          root = nullptr;
+
+          bool ret = true;
+          for (auto each : arr) {
+                    ret &= this->insert(each);
+                    if (ret == false) return false;
+          }
+
           return std::move(ret);
 }

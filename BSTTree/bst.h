@@ -3,6 +3,9 @@
 #include <memory.h>
 #include <stack>
 #include <vector>
+#include <functional>
+#include <memory>
+#include <cassert>
 
 #include "../iterator.h"
 
@@ -20,6 +23,9 @@ template <typename T>
 class BSTNode;
 template <typename T, BST::CMP cmp = BST::DESC>
 class BSTTree;
+
+template <typename T>
+inline bool node_exist(typename BSTNode<T>::node& node);
 
 template <typename T>
 inline bool operator<(const std::shared_ptr<BSTNode<T>> left, const std::shared_ptr<BSTNode<T>> right) 
@@ -85,7 +91,6 @@ public:
           bool destroyed = false;
 };
 
-
 template <typename Type, BST::CMP cmp>
 class BSTTree {
           typedef bool (*cpf) (const Type& x, const Type& y);
@@ -146,9 +151,14 @@ public:
 
           const std::vector<Type> to_array();
           const std::vector<Type> serilize();
+
+          bool customize(std::function<bool(const Type&, const Type&)> f);
 private:
           typename BSTNode<Type>::node root;
-          cpf fn;
+          // cpf fn;
+          
+          // Support for altanative customized function
+          std::function<bool(const Type&, const Type&)> fn;
 
           // Extra fundation for fast finding begin and end iterator
           BSTNode<Type> *head = nullptr, *tail = nullptr;
