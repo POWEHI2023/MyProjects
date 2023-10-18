@@ -8,7 +8,7 @@
 #include <cassert>
 
 #include "../iterator.h"
-#include "node.h"
+#include "node.cpp"
 
 template <typename T>
 class BSTTree;
@@ -21,11 +21,17 @@ public:
 
           class iterator {
           public:
-                    iterator(const BSTNode<Type> *crt, const BSTTree<Type> *from);
+                    // iterator(const BSTNode<Type> *crt, const BSTTree<Type> *from);
+                    iterator(const BSTNode<Type> *crt);
+                    iterator(const typename BSTNode<Type>::node& crt);
+
                     iterator(const iterator& iter);
                     iterator(const iterator&& iter);
+                    void operator=(const iterator& iter);
+                    void operator=(const iterator&& iter);
+
                     bool operator==(const iterator& iter) const
-                    { return this->crt == iter.crt && this->from == iter.from; }
+                    { return this->crt == iter.crt && this->end == iter.end; }
                     bool operator==(const nullptr_t v) const
                     { return this->crt == v; }
 
@@ -44,11 +50,13 @@ public:
                     BSTNode<Type>* operator->() const;
 
                     bool destroyed() const
-                    { return !crt->before && !crt->next && crt != from->root; }
+                    { return crt->destroyed; }
           private:
-                    BSTNode<Type> *crt;
-                    BSTTree *from;
+                    // BSTNode<Type> *crt;
+                    // BSTTree *from;
 
+                    BSTNode<Type>* crt;
+                    bool end = false;
           public:          
                     friend BSTTree;
                     
@@ -63,9 +71,9 @@ public:
 
           // Waiting......
           // Base insert
-          bool insert(const Type& elem);
+          void insert(const Type& elem);
           // Rval insert
-          bool insert(const Type&& elem);
+          // bool insert(const Type&& elem);
           bool erase(const iterator& iter);
           const iterator find(const Type& elem);
           const iterator begin();

@@ -35,8 +35,7 @@ inline bool operator==(const typename BSTNode<T>::node left, const typename BSTN
                     else return false;
 
                     return ret;
-          } else return false;
-          
+          } else return false;   
 }
 template <typename T>
 inline bool operator!=(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) 
@@ -49,23 +48,25 @@ public:
           typedef std::shared_ptr<BSTNode<Type>> node;
 
           // BSTNode(): element(0), left(nullptr), right(nullptr) { }
-          explicit BSTNode(const Type& relem, const BSTNode *left, const BSTNode *right);
+          explicit BSTNode(const Type& relem, const BSTNode *left = nullptr, const BSTNode *right = nullptr);
           ~BSTNode();
 
-          BSTNode(const BSTNode<Type> *node);
+          BSTNode(const BSTNode<Type>* node);
           BSTNode(const BSTNode<Type>& node);
           BSTNode(const BSTNode<Type>&& rnode);
           void clear();
 
-          static BSTNode* create_node(int, const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
+          static BSTNode* create_node_(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
           static void release_node(const BSTNode<Type>* node);
 
-          static std::shared_ptr<BSTNode<Type>> create_node(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
+          static const std::shared_ptr<BSTNode<Type>> create_node(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
 
           Type element;
-          node left, right;
+          node left = nullptr, right = nullptr;
 
           // Extra fundation for fast iterator
-          BSTNode<Type> *before = nullptr, *next = nullptr;
+          // BSTNode<Type> *before = nullptr, *next = nullptr;
+          node before = nullptr, next = nullptr;
+
           bool destroyed = false;
 };

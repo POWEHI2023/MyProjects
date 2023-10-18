@@ -37,10 +37,6 @@ bool BSTTree<T>::operator==(const BSTTree& bst)
  */
 
 template <typename T>
-bool BSTTree<T>::insert(const T&& elem) 
-{ return insert(elem); }
-
-template <typename T>
 const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) {
           typename BSTNode<T>::node node = root;
           while (node)
@@ -85,9 +81,9 @@ bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) {
                     for (auto each : s1) {
                               arr.push_back(each->element);
 
-                              if (each->left != nullptr && !each->left->destroyed)
+                              if (each->left != nullptr)
                               s2.push_back(each->left);
-                              if (each->right != nullptr && !each->right->destroyed)
+                              if (each->right != nullptr)
                               s2.push_back(each->right);
                     }
                     s1 = std::move(s2);
@@ -109,41 +105,80 @@ bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) {
 /**
  * Iterator implimentations
  */
+
+// template <typename T>
+// BSTTree<T>::iterator::iterator(const BSTNode<T> *crt, const BSTTree *from): 
+// crt(const_cast<BSTNode<T>*>(crt)), from(const_cast<BSTTree*>(from)) { }
+
 template <typename T>
-BSTTree<T>::iterator::iterator(const BSTNode<T> *crt, const BSTTree *from): 
-crt(const_cast<BSTNode<T>*>(crt)), from(const_cast<BSTTree*>(from)) { }
+BSTTree<T>::iterator::iterator(const BSTNode<T> *crt):
+crt(const_cast<BSTNode<T>*>(crt)) { }
+
+template <typename T>
+BSTTree<T>::iterator::iterator(const typename BSTNode<T>::node& crt):
+crt(crt.get()) { }
 
 template <typename T>
 BSTTree<T>::iterator::iterator(const iterator& iter):
-crt(iter.crt), from(iter.from) { }
+crt(iter.crt), end(iter.end) { }
 
 template <typename T>
 BSTTree<T>::iterator::iterator(const iterator&& iter):
-crt(std::move(iter.crt)), from(std::move(iter.from)) { }
+crt(std::move(iter.crt)), end(std::move(iter.end)) { }
+
+template <typename T>
+void BSTTree<T>::iterator::operator=(const iterator& iter) {
+          this->crt = iter.crt;
+          this->end = iter.end;
+}
+
+template <typename T>
+void BSTTree<T>::iterator::operator=(const iterator&& iter) { 
+          this->crt = std::move(iter.crt);
+          this->end = std::move(iter.end);
+}
 
 template <typename T>
 typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator++() { 
-          if (crt != nullptr) crt = crt->next;
+          if (!end && !destroyed()) {
+                    if (crt->next != nullptr) crt = crt->next.get();
+                    else end = true;
+          } else {
+                    printf("operator++ can not be executed in this iterator which is destroyed or the end element.\n");
+                    exit(1);
+          }
           return *this;
 }
 
 template <typename T>
 const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator++(int) {
           iterator ret = iterator(*this);
-          if (crt != nullptr) crt = crt->next;
+          ++(*this);
           return std::move(ret);
 }
 
 template <typename T>
 typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator--() {
-          if (crt != nullptr) crt = crt->before;
+          if (destroyed()) {
+                    printf("Current iterator point to element which has been destroyed when execure operator--.\n");
+                    exit(1);
+          }
+
+          if (end) { end = false; }
+          else {
+                    if (crt->before != nullptr) crt = crt->before.get();
+                    else {
+                              printf("Current iterator point to the first element, can not execure any operator--.\n");
+                              exit(1);
+                    }
+          }
           return *this;
 }
 
 template <typename T>
 const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator--(int) {
           iterator ret = iterator(*this);
-          if (crt != nullptr) crt = crt->before;
+          --(*this);
           return std::move(ret);
 }
 
@@ -171,3 +206,90 @@ template <typename T>
 BSTNode<T>* BSTTree<T>::iterator::operator->() const { return crt; }
 
 
+/**
+ * Append functions
+ */
+
+template <typename T>
+void BSTTree<T>::insert(const T& elem) {
+          if (root == nullptr) {
+                    root = BSTNode<T>::create_node(elem);
+                    this->head = root.get();
+                    this->tail = root.get();
+                    return;
+          }
+
+          typename BSTNode<T>::node target = root;
+          while (1)
+          if (fn(target->element, elem)) {
+                    // Judge left
+                    if (target->left != nullptr) {
+                              target = target->left;
+                    }
+                    else {
+                              target->left = BSTNode<T>::create_node(elem);
+
+                              // All four links
+                              target->left->before = target->before;  
+                              if (target->before != nullptr) target->before->next = target->left;
+                              target->left->next = target;
+                              target->before = target->left;
+
+                              if (this->head == target.get()) {
+                                        this->head = target->left.get();
+                              }
+                              break;
+                    }
+          } else {
+                    // Judge right
+                    if (target->right != nullptr) {
+                              target = target->right;
+                    }
+                    else {
+                              target->right = BSTNode<T>::create_node(elem);
+                    
+                              /**
+                               * Target <-> TargetOriginNext
+                               * =>
+                               * Target <-> TargetRight <-> TargetOriginNext
+                               */
+                              target->right->next = target->next;
+                              if (target->next != nullptr) target->next->before = target->right;
+                              target->right->before = target;
+                              target->next = target->right;
+
+                              /**
+                               * Origin last links: Target <-> nullptr (tail is Target),
+                               * After insert links: Target <-> TargetRight <-> nullptr (tail is TargetRight)
+                               */ 
+                              if (this->tail == target.get()) {
+                                        this->tail = target->right.get();
+                              }
+                              break;
+                    }
+          }
+          // printf("\n%d, %d, %d\n", target->element, target->left != nullptr ? target->left->element : -1, target->right != nullptr ? target->right->element : -1);
+}
+
+template <typename T>
+const typename BSTTree<T>::iterator BSTTree<T>::begin() 
+{ return iterator(this->head); }
+
+template <typename T>
+const typename BSTTree<T>::iterator BSTTree<T>::end() {  
+          iterator iter(this->tail);
+          iter++;
+          return std::move(iter);
+}
+
+template <typename T>
+const std::vector<T> BSTTree<T>::to_array() {
+          std::vector<T> ret;
+          BSTNode<T> *start = this->head;
+          while (start != nullptr)  {
+                    ret.push_back(start->element);
+                    if (start->next != nullptr) start = start->next.get();
+                    else break;
+          }
+          return std::move(ret);
+}

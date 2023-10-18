@@ -2,6 +2,12 @@
 
 #include <gtest/gtest.h>
 
+template <typename T>
+void display(const std::vector<T>& arr) {
+          for (auto x : arr) std::cout << x << " ";
+          std::cout << std::endl;
+}
+
 void tree_test() {
           /**
            *       6
@@ -16,52 +22,47 @@ void tree_test() {
            */
 
           {
-                    printf("@@@\n");
-                    BSTTree<int> *bst1 = new BSTTree<int>();
-                    bst1->insert(6);
-                    bst1->insert(3);
-                    bst1->insert(8);
-                    bst1->insert(1);
-                    bst1->insert(4);
+                    BSTTree<int> bst1;
+                    bst1.insert(6);
+                    bst1.insert(3);
+                    bst1.insert(8);
+                    bst1.insert(1);
+                    bst1.insert(4);
 
-                    std::cout << bst1->modified << "\n";
-                    std::vector<int> arr1 = bst1->to_array();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
-                    arr1 = bst1->serilize();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
-                    std::cout << bst1->modified << "\n";
+                    std::vector<int> arr1 = bst1.to_array();
+                    display(arr1);
 
-                    BSTTree<int>::iterator iter = bst1->end();
-                    std::cout << "Get iter " << iter->element << std::endl;
-                    iter--;
-                    std::cout << "Get iter " << iter->element << std::endl;
-                    bst1->erase(iter);
+                    arr1 = bst1.serilize();
+                    display(arr1);
 
-                    arr1 = bst1->to_array();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
-                    arr1 = bst1->serilize();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
+                    bst1.insert(5);
+                    arr1 = bst1.to_array();
+                    display(arr1);
 
-                    bst1->customize([](const int& x, const int& y){ return x < y; });
+                    arr1 = bst1.serilize();
+                    display(arr1);
+          }
 
-                    arr1 = bst1->to_array();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
-                    arr1 = bst1->serilize();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
+          {
+                    BSTTree<int> bst1;
+                    bst1.insert(6);
+                    bst1.insert(3);
+                    bst1.insert(8);
+                    bst1.insert(1);
+                    bst1.insert(4);
 
-                    bst1->customize([](const int& x, const int& y){ return x > y; });
-                    arr1 = bst1->to_array();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
-                    arr1 = bst1->serilize();
-                    for (auto x : arr1) std::cout << x << " ";
-                    std::cout << std::endl;
+                    BSTTree<int>::iterator iter = bst1.begin();
+                    for (; iter != bst1.end(); ++iter) {
+                              printf("%d ", iter->element);
+                    }
+                    printf("\n");
+
+                    bst1.insert(4);
+                    iter = bst1.begin();
+                    for (; iter != bst1.end(); ++iter) {
+                              printf("%d ", iter->element);
+                    }
+                    printf("\n");
           }
 }
 
