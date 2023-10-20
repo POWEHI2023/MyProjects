@@ -23,8 +23,8 @@ head(bst.head), tail(bst.tail), modified(bst.modified)
 
 template <typename T>
 BSTTree<T>::BSTTree(const BSTTree&& bst): 
-root(std::move(bst.root)), fn(bst.fn),
-head(std::move(bst.head)), tail(std::move(bst.tail)), modified(bst.modified)
+root(std::move(bst.root)), fn(std::move(bst.fn)),
+head(std::move(bst.head)), tail(std::move(bst.tail)), modified(std::move(bst.modified))
 {  }
 
 template <typename T>
@@ -38,13 +38,13 @@ bool BSTTree<T>::operator==(const BSTTree& bst)
 
 template <typename T>
 const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) {
-          typename BSTNode<T>::node node = root;
+          BSTNode<T>* node = root.get();
           while (node)
-          if (fn(node->element, elem)) node = node->left;
-          else if (node->element == elem) return iterator(node.get(), this);
-          else node = node->right;
+          if (fn(node->element, elem)) node = node->left != nullptr ? node->left.get() : nullptr;
+          else if (node->element == elem) return std::move(iterator(node));
+          else node = node->right != nullptr ? node->right.get() : nullptr;
           
-          return iterator(nullptr, nullptr);
+          return std::move(end());
 }
 
 template <typename T>
@@ -74,31 +74,27 @@ bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) {
 
           // 对已有节点进行重构
           std::vector<T> arr;
-          std::vector<typename BSTNode<T>::node> s1;
-          s1.push_back(root);
+          std::vector<BSTNode<T>*> s1;
+          s1.push_back(root.get());
           while (s1.size() != 0) {
-                    std::vector<typename BSTNode<T>::node> s2;
+                    std::vector<BSTNode<T>*> s2;
                     for (auto each : s1) {
                               arr.push_back(each->element);
 
                               if (each->left != nullptr)
-                              s2.push_back(each->left);
+                              s2.push_back(each->left.get());
                               if (each->right != nullptr)
-                              s2.push_back(each->right);
+                              s2.push_back(each->right.get());
                     }
                     s1 = std::move(s2);
           }
 
           // 用新的排序方式，重新插入节点
           root = nullptr;
-          bool ret = true;
-          for (auto each : arr) {
-                    ret &= this->insert(each);
-                    if (ret == false) return false;
-          }
+          for (auto each : arr) this->insert(each);
 
           // 返回处理结果
-          return std::move(ret);
+          return true;
 }
 
 

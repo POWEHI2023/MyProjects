@@ -63,6 +63,15 @@ public:
           };
 
           explicit BSTTree(std::function<bool(const Type&, const Type&)> fn = [](const Type& x, const Type& y) { return x > y; });
+
+          /**
+           * New variable arguments constructor
+           */
+          BSTTree(const std::initializer_list<Type>& list, std::function<bool(const Type&, const Type&)> fn = [](const Type& x, const Type& y) { return x > y; }): 
+          root(nullptr), fn(fn) {
+                    for (auto each : list) insert(each);
+          }
+
           BSTTree(const BSTTree& bst);
           BSTTree(const BSTTree&& bst);
           ~BSTTree();
@@ -72,6 +81,13 @@ public:
           // Waiting......
           // Base insert
           void insert(const Type& elem);
+
+          template <typename... _Args>
+          void insert(const Type& first, const _Args&... others) {
+                    insert(first);
+                    insert(others...);
+          }
+
           // Rval insert
           // bool insert(const Type&& elem);
           bool erase(const iterator& iter);

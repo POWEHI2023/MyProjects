@@ -64,6 +64,17 @@ void tree_test() {
                     }
                     printf("\n");
           }
+
+          {
+                    BSTTree<int> bst{6,3,8,1,4};
+          
+                    std::vector<int> arr = bst.to_array();
+                    display(arr);
+
+                    bst.customize([](int x, int y){ return x < y; });
+                    arr = bst.to_array();
+                    display(arr);
+          }
 }
 
 int main() {
