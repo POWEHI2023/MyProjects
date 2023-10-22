@@ -21,57 +21,46 @@ public:
 
           class iterator {
           public:
-                    // iterator(const BSTNode<Type> *crt, const BSTTree<Type> *from);
                     iterator(const BSTNode<Type> *crt);
                     iterator(const typename BSTNode<Type>::node& crt);
-
                     iterator(const iterator& iter);
                     iterator(const iterator&& iter);
                     void operator=(const iterator& iter);
                     void operator=(const iterator&& iter);
-
-                    bool operator==(const iterator& iter) const
+                    // 
+                    bool operator==(const iterator& iter) const noexcept
                     { return this->crt == iter.crt && this->end == iter.end; }
-                    bool operator==(const nullptr_t v) const
+                    bool operator==(const nullptr_t v) const noexcept
                     { return this->crt == v; }
-
-                    bool operator!=(const iterator& iter) const
+                    bool operator!=(const iterator& iter) const noexcept
                     { return !this->operator==(iter); }
+                    // 
+                    iterator& operator++() noexcept;
+                    const iterator operator++(int) noexcept;
+                    iterator& operator--() noexcept;
+                    const iterator operator--(int) noexcept;
+                    iterator operator+(uint32_t steps) const noexcept;
+                    iterator operator-(uint32_t steps) const noexcept;
+                    void operator+=(uint32_t steps) noexcept;
+                    void operator-=(uint32_t steps) noexcept;
 
-                    iterator& operator++();
-                    const iterator operator++(int);
-                    iterator& operator--();
-                    const iterator operator--(int);
-                    const iterator operator+(uint32_t steps);
-                    const iterator operator-(uint32_t steps);
-                    void operator+=(uint32_t steps);
-                    void operator-=(uint32_t steps);
-
-                    BSTNode<Type>* operator->() const;
+                    BSTNode<Type>* operator->() const noexcept;
+                    BSTNode<Type>* operator*() const noexcept;
 
                     bool destroyed() const
-                    { return crt->destroyed; }
+                    { return iter_destroyed || crt->destroyed; }
           private:
-                    // BSTNode<Type> *crt;
-                    // BSTTree *from;
-
                     BSTNode<Type>* crt;
                     bool end = false;
+
+                    bool iter_destroyed = false;
           public:          
                     friend BSTTree;
-                    
           };
 
           explicit BSTTree(std::function<bool(const Type&, const Type&)> fn = [](const Type& x, const Type& y) { return x > y; });
-
-          /**
-           * New variable arguments constructor
-           */
           BSTTree(const std::initializer_list<Type>& list, std::function<bool(const Type&, const Type&)> fn = [](const Type& x, const Type& y) { return x > y; }): 
-          root(nullptr), fn(fn) {
-                    for (auto each : list) insert(each);
-          }
-
+          root(nullptr), fn(fn) { for (auto each : list) insert(each); }
           BSTTree(const BSTTree& bst);
           BSTTree(const BSTTree&& bst);
           ~BSTTree();
@@ -91,12 +80,12 @@ public:
           // Rval insert
           // bool insert(const Type&& elem);
           bool erase(const iterator& iter);
-          const iterator find(const Type& elem);
-          const iterator begin();
-          const iterator end();
+          const iterator find(const Type& elem) const;
+          iterator begin() const;
+          iterator end() const;
 
-          const std::vector<Type> to_array();
-          const std::vector<Type> serilize();
+          const std::vector<Type> to_array() const;
+          const std::vector<Type> serilize() const;
 
           bool customize(std::function<bool(const Type&, const Type&)> f);
 private:
@@ -114,3 +103,8 @@ private:
           bool erase_root(typename BSTNode<Type>::node& root);
 public:
 };
+
+template <typename T>
+inline decltype(auto) operator+(const typename BSTTree<T>::iterator iter, int x) {
+          return std::forward(iter + x);
+}

@@ -54,11 +54,11 @@ public:
           BSTNode(const BSTNode<Type>* node);
           BSTNode(const BSTNode<Type>& node);
           BSTNode(const BSTNode<Type>&& rnode);
-          void clear();
+          void operator=(const BSTNode<Type>& node);
+          void operator=(const BSTNode<Type>&& rnode);
 
           static BSTNode* create_node_(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
           static void release_node(const BSTNode<Type>* node);
-
           static const std::shared_ptr<BSTNode<Type>> create_node(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
 
           Type element;
@@ -70,3 +70,6 @@ public:
 
           bool destroyed = false;
 };
+
+template <typename T>
+using bstNode = typename BSTNode<T>::node;

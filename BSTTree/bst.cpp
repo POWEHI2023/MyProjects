@@ -28,8 +28,7 @@ head(std::move(bst.head)), tail(std::move(bst.tail)), modified(std::move(bst.mod
 {  }
 
 template <typename T>
-bool BSTTree<T>::operator==(const BSTTree& bst) 
-{ return root == bst.root; }
+bool BSTTree<T>::operator==(const BSTTree& bst) { return root == bst.root; }
 
 
 /**
@@ -37,7 +36,7 @@ bool BSTTree<T>::operator==(const BSTTree& bst)
  */
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) {
+const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) const{
           BSTNode<T>* node = root.get();
           while (node)
           if (fn(node->element, elem)) node = node->left != nullptr ? node->left.get() : nullptr;
@@ -48,7 +47,7 @@ const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) {
 }
 
 template <typename T>
-const std::vector<T> BSTTree<T>::serilize() {
+const std::vector<T> BSTTree<T>::serilize() const {
           std::vector<T> ret;
           std::stack<typename BSTNode<T>::node> s;
           s.push(root);
@@ -72,7 +71,6 @@ bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) {
           this->fn = f; 
           if (root == nullptr || (root->left == nullptr && root->right == nullptr)) return true;
 
-          // 对已有节点进行重构
           std::vector<T> arr;
           std::vector<BSTNode<T>*> s1;
           s1.push_back(root.get());
@@ -89,11 +87,9 @@ bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) {
                     s1 = std::move(s2);
           }
 
-          // 用新的排序方式，重新插入节点
           root = nullptr;
           for (auto each : arr) this->insert(each);
 
-          // 返回处理结果
           return true;
 }
 
@@ -101,10 +97,6 @@ bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) {
 /**
  * Iterator implimentations
  */
-
-// template <typename T>
-// BSTTree<T>::iterator::iterator(const BSTNode<T> *crt, const BSTTree *from): 
-// crt(const_cast<BSTNode<T>*>(crt)), from(const_cast<BSTTree*>(from)) { }
 
 template <typename T>
 BSTTree<T>::iterator::iterator(const BSTNode<T> *crt):
@@ -135,7 +127,7 @@ void BSTTree<T>::iterator::operator=(const iterator&& iter) {
 }
 
 template <typename T>
-typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator++() { 
+typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator++() noexcept { 
           if (!end && !destroyed()) {
                     if (crt->next != nullptr) crt = crt->next.get();
                     else end = true;
@@ -147,14 +139,14 @@ typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator++() {
 }
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator++(int) {
+const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator++(int) noexcept {
           iterator ret = iterator(*this);
           ++(*this);
           return std::move(ret);
 }
 
 template <typename T>
-typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator--() {
+typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator--() noexcept {
           if (destroyed()) {
                     printf("Current iterator point to element which has been destroyed when execure operator--.\n");
                     exit(1);
@@ -172,39 +164,34 @@ typename BSTTree<T>::iterator& BSTTree<T>::iterator::operator--() {
 }
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator--(int) {
+const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator--(int)  noexcept {
           iterator ret = iterator(*this);
           --(*this);
           return std::move(ret);
 }
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator+(uint32_t steps) {
+typename BSTTree<T>::iterator BSTTree<T>::iterator::operator+(uint32_t steps)  const noexcept {
           iterator ret(*this);
           ret += steps;
           return std::move(ret);
 }
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::iterator::operator-(uint32_t steps) {
+typename BSTTree<T>::iterator BSTTree<T>::iterator::operator-(uint32_t steps)  const noexcept {
           iterator ret(*this);
           ret -= steps;
           return std::move(ret);
 }
 
 template <typename T>
-void BSTTree<T>::iterator::operator+=(uint32_t steps) { while (steps--) (*this)++; }
+void BSTTree<T>::iterator::operator+=(uint32_t steps)  noexcept { while (steps--) (*this)++; }
 
 template <typename T>
-void BSTTree<T>::iterator::operator-=(uint32_t steps) { while (steps--) (*this)--; }
+void BSTTree<T>::iterator::operator-=(uint32_t steps)  noexcept { while (steps--) (*this)--; }
 
 template <typename T>
-BSTNode<T>* BSTTree<T>::iterator::operator->() const { return crt; }
-
-
-/**
- * Append functions
- */
+BSTNode<T>* BSTTree<T>::iterator::operator->() const  noexcept { return crt; }
 
 template <typename T>
 void BSTTree<T>::insert(const T& elem) {
@@ -264,22 +251,21 @@ void BSTTree<T>::insert(const T& elem) {
                               break;
                     }
           }
-          // printf("\n%d, %d, %d\n", target->element, target->left != nullptr ? target->left->element : -1, target->right != nullptr ? target->right->element : -1);
 }
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::begin() 
+typename BSTTree<T>::iterator BSTTree<T>::begin() const 
 { return iterator(this->head); }
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::end() {  
+typename BSTTree<T>::iterator BSTTree<T>::end() const {  
           iterator iter(this->tail);
           iter++;
           return std::move(iter);
 }
 
 template <typename T>
-const std::vector<T> BSTTree<T>::to_array() {
+const std::vector<T> BSTTree<T>::to_array() const {
           std::vector<T> ret;
           BSTNode<T> *start = this->head;
           while (start != nullptr)  {
@@ -288,4 +274,117 @@ const std::vector<T> BSTTree<T>::to_array() {
                     else break;
           }
           return std::move(ret);
+}
+
+/**
+ * Append functions
+ */
+
+template <typename T>
+bool BSTTree<T>::erase (const iterator& iter) {
+          if (iter.end == true || iter.destroyed()) return false;
+          std::cout << "Erase node " << iter->element << std::endl;
+          typedef BSTNode<T>* bn;
+
+          bn node = root.get(), before = nullptr;
+          bool ret = false;
+          if (node == iter.operator->()) erase_root(root);
+          while (node != nullptr) {
+                    if (fn(node->element, iter->element)) {
+                              if (node->left.get() == iter.operator->()) {
+                                        ret = erase_root(node->left);
+                                        break;
+                              }
+                              node = node->left != nullptr ? node->left.get() : nullptr;
+                    } else {
+                              if (node->right.get() == iter.operator->()) {
+                                        ret = erase_root(node->right);
+                                        break;
+                              }
+                              node = node->right != nullptr ? node->right.get() : nullptr;
+                    }
+          }
+          if (ret) const_cast<iterator&>(iter).iter_destroyed = true;
+          return ret;
+}
+
+template <typename T>
+bool BSTTree<T>::erase_root (bstNode<T>& root) {
+          auto b2i = [&](bool b) -> decltype(auto) {
+                    return b ? 0x01 : 0x00;
+          };
+          typedef BSTNode<T>* bn;
+
+          switch (
+                    b2i(root->left != nullptr) |
+                    b2i(root->right != nullptr) << 1
+          ) {
+                    case 0: { // No left and no right
+                              if (root->before != nullptr) root->before->next = std::move(root->next);
+                              if (root->next != nullptr) root->next->before = std::move(root->before);
+                              if (tail == root.get()) tail = root->before != nullptr ? root->before.get() : nullptr;
+                              if (head == root.get()) head = root->next != nullptr ? root->next.get() : nullptr;
+
+                              root = nullptr;
+                              return true;
+                    }
+                    case 1: { // Have left but no right
+                              bstNode<T> new_root = root->left;
+
+                              bn node = root->left.get();
+                              while (node->right != nullptr) node = node->right.get();
+
+                              if (root.get() == this->tail) {
+                                        // node <-> root <-> nullptr
+                                        node->next = nullptr;
+                                        tail = node;
+                              } else {
+                                        // node <-> root <-> node2
+                                        bn node2 = root->next.get();
+                                        // node <-> node2
+                                        node->next = std::move(root->next);
+                                        if (node2 != nullptr) node2->before = std::move(root->before);
+                              }
+
+                              root = new_root;
+                              return true;
+                    }
+                    case 2: { // Have right but no left
+                              bstNode<T> new_root = root->right;
+
+                              bn node = root->right.get();
+                              while (node->left != nullptr) node = node->left.get();
+
+                              if (root.get() == this->head) {
+                                        node->before = nullptr;
+                                        head = node;
+                              } else {
+                                        bn node2 = root->before.get();
+                                        node->before = std::move(root->before);
+                                        if (node2 != nullptr) node2->next = std::move(root->next);
+                              }
+
+                              root = new_root;
+                              return true;
+                    }
+                    case 3: { // Have left and have right
+                              bstNode<T> new_root = root->left;
+
+                              bn node = root->left.get();
+                              while (node->right != nullptr) node = node->right.get();
+                              bn node1 = root->right.get();
+                              while (node1->left != nullptr) node1 = node1->left.get();
+
+                              node->right = root->right;
+                              node->next = std::move(root->next);
+                              node1->before = std::move(root->before);
+
+                              root = new_root;
+                              return true;
+                    }
+                    default: {
+                              printf("Something wrong happened in `bool erase_root(bstNode<%s>& root)`", typeid(T).name());
+                              exit(0);
+                    }
+          }
 }

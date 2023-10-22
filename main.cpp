@@ -8,6 +8,12 @@ void display(const std::vector<T>& arr) {
           std::cout << std::endl;
 }
 
+template <typename T>
+void arr4display(const BSTTree<T>& tree) {
+          std::vector<T> arr = tree.to_array();
+          display(arr);
+}
+
 void tree_test() {
           /**
            *       6
@@ -74,6 +80,28 @@ void tree_test() {
                     bst.customize([](int x, int y){ return x < y; });
                     arr = bst.to_array();
                     display(arr);
+          }
+
+          {
+                    BSTTree<int> bst{6, 3, 8, 1, 4, 5};
+                    arr4display(bst);
+
+                    bst.insert(10);
+                    arr4display(bst);
+
+                    bst.erase(bst.find(3));
+                    arr4display(bst);
+
+                    bst.erase(bst.begin());
+                    arr4display(bst);
+
+                    BSTTree<int>::iterator iter = bst.begin();
+                    iter += 4;
+                    bst.erase(iter);
+                    arr4display(bst);
+
+                    bst.erase(bst.begin() + 1 + 2);
+                    arr4display(bst);
           }
 }
 

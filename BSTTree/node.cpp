@@ -28,11 +28,17 @@ element(std::move(node.element)), left(std::move(node.left)), right(std::move(no
 { }
 
 template <typename Type>
-void BSTNode<Type>::clear() { 
-          left = nullptr;
-          right = nullptr;
-          before = nullptr; 
-          next = nullptr;
+void BSTNode<Type>::operator=(const BSTNode& node) {
+          this->element = node.element;
+          this->left = node.left;
+          this->right = node.right;
+}
+
+template <typename Type>
+void BSTNode<Type>::operator=(const BSTNode&& node) {
+          this->element = std::move(node.element);
+          this->left = std::move(node.left);
+          this->right = std::move(node.right);
 }
 
 template <typename Type>
@@ -48,5 +54,9 @@ void BSTNode<Type>::release_node(const BSTNode* bst)
 { delete bst; }
 
 template <typename Type>
-BSTNode<Type>::~BSTNode() 
-{ clear(); }
+BSTNode<Type>::~BSTNode() { 
+          left = nullptr;
+          right = nullptr;
+          before = nullptr; 
+          next = nullptr;
+}
