@@ -103,6 +103,14 @@ void tree_test() {
                     bst.erase(bst.begin() + 1 + 2);
                     arr4display(bst);
           }
+
+          {
+                    std::shared_ptr<BSTTree<int>> p(new BSTTree<int>, [](BSTTree<int>* x) {
+                              printf("Delete BSTTree\n");
+                              delete x;
+                    });  
+          }
+          printf("After\n");
 }
 
 int main() {
