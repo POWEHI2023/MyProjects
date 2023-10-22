@@ -58,8 +58,10 @@ public:
           void operator=(const BSTNode<Type>&& rnode);
 
           static BSTNode* create_node_(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
+          static BSTNode* create_node_(const Type&& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
           static void release_node(const BSTNode<Type>* node);
           static const std::shared_ptr<BSTNode<Type>> create_node(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
+          static const std::shared_ptr<BSTNode<Type>> create_node(const Type&& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
 
           Type element;
           node left = nullptr, right = nullptr;

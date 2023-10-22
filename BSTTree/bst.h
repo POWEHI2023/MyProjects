@@ -45,7 +45,7 @@ public:
                     void operator-=(uint32_t steps) noexcept;
 
                     BSTNode<Type>* operator->() const noexcept;
-                    BSTNode<Type>* operator*() const noexcept;
+                    BSTNode<Type>& operator*() const noexcept;
 
                     bool destroyed() const
                     { return iter_destroyed || crt->destroyed; }
@@ -61,20 +61,31 @@ public:
           explicit BSTTree(std::function<bool(const Type&, const Type&)> fn = [](const Type& x, const Type& y) { return x > y; });
           BSTTree(const std::initializer_list<Type>& list, std::function<bool(const Type&, const Type&)> fn = [](const Type& x, const Type& y) { return x > y; }): 
           root(nullptr), fn(fn) { for (auto each : list) insert(each); }
+          BSTTree(const BSTTree* bst);
           BSTTree(const BSTTree& bst);
           BSTTree(const BSTTree&& bst);
-          ~BSTTree();
+
+          virtual void operator=(const BSTTree& bst);
+          virtual void operator=(const BSTTree&& bst);
+
+          virtual ~BSTTree();
 
           bool operator==(const BSTTree& bst);
 
           // Waiting......
           // Base insert
-          void insert(const Type& elem);
-
+          virtual void insert(const Type& elem);
           template <typename... _Args>
           void insert(const Type& first, const _Args&... others) {
                     insert(first);
                     insert(others...);
+          }
+
+          virtual void insert(const Type&& elem);
+          template <typename... _Args>
+          void insert(const Type&& first, _Args&&... others) {
+                    insert(std::move(first));
+                    insert(std::forward(others...));
           }
 
           // Rval insert
@@ -100,7 +111,7 @@ private:
           bool modified = false;
           
           // Tool function
-          bool erase_root(typename BSTNode<Type>::node& root);
+          virtual bool erase_root(typename BSTNode<Type>::node& root);
 public:
 };
 

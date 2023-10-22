@@ -17,6 +17,11 @@ BSTTree<T>::~BSTTree() {
 }
 
 template <typename T>
+BSTTree<T>::BSTTree(const BSTTree* bst): root(bst->root), fn(bst->fn), 
+head(bst->head), tail(bst->tail), modified(bst->modified)
+{  }
+
+template <typename T>
 BSTTree<T>::BSTTree(const BSTTree& bst): root(bst.root), fn(bst.fn), 
 head(bst.head), tail(bst.tail), modified(bst.modified)
 {  }
@@ -26,6 +31,24 @@ BSTTree<T>::BSTTree(const BSTTree&& bst):
 root(std::move(bst.root)), fn(std::move(bst.fn)),
 head(std::move(bst.head)), tail(std::move(bst.tail)), modified(std::move(bst.modified))
 {  }
+
+template <typename T>
+void BSTTree<T>::operator=(const BSTTree& bst) {
+          this->root = bst.root;
+          this->fn = bst.fn;
+          this->head = bst.head;
+          this->tail = bst.tail;
+          this->modified = bst.modified;
+}
+
+template <typename T>
+void BSTTree<T>::operator=(const BSTTree&& bst) {
+          this->root = std::move(bst.root);
+          this->fn = std::move(bst.fn);
+          this->head = std::move(bst.head);
+          this->tail = std::move(bst.tail);
+          this->modified = std::move(bst.modified);
+}
 
 template <typename T>
 bool BSTTree<T>::operator==(const BSTTree& bst) { return root == bst.root; }
@@ -194,6 +217,9 @@ template <typename T>
 BSTNode<T>* BSTTree<T>::iterator::operator->() const  noexcept { return crt; }
 
 template <typename T>
+BSTNode<T>& BSTTree<T>::iterator::operator*() const  noexcept { return *crt; }
+
+template <typename T>
 void BSTTree<T>::insert(const T& elem) {
           if (root == nullptr) {
                     root = BSTNode<T>::create_node(elem);
@@ -283,7 +309,6 @@ const std::vector<T> BSTTree<T>::to_array() const {
 template <typename T>
 bool BSTTree<T>::erase (const iterator& iter) {
           if (iter.end == true || iter.destroyed()) return false;
-          std::cout << "Erase node " << iter->element << std::endl;
           typedef BSTNode<T>* bn;
 
           bn node = root.get(), before = nullptr;
@@ -385,6 +410,54 @@ bool BSTTree<T>::erase_root (bstNode<T>& root) {
                     default: {
                               printf("Something wrong happened in `bool erase_root(bstNode<%s>& root)`", typeid(T).name());
                               exit(0);
+                    }
+          }
+}
+
+template <typename T>
+void BSTTree<T>::insert(const T&& elem) {
+          if (root == nullptr) {
+                    root = BSTNode<T>::create_node(std::move(elem));
+                    this->head = root.get();
+                    this->tail = root.get();
+                    return;
+          }
+
+          typename BSTNode<T>::node target = root;
+          while (1)
+          if (fn(target->element, elem)) {
+                    if (target->left != nullptr) {
+                              target = target->left;
+                    }
+                    else {
+                              target->left = BSTNode<T>::create_node(std::move(elem));
+
+                              target->left->before = target->before;  
+                              if (target->before != nullptr) target->before->next = target->left;
+                              target->left->next = target;
+                              target->before = target->left;
+
+                              if (this->head == target.get()) {
+                                        this->head = target->left.get();
+                              }
+                              break;
+                    }
+          } else {
+                    if (target->right != nullptr) {
+                              target = target->right;
+                    }
+                    else {
+                              target->right = BSTNode<T>::create_node(std::move(elem));
+                    
+                              target->right->next = target->next;
+                              if (target->next != nullptr) target->next->before = target->right;
+                              target->right->before = target;
+                              target->next = target->right;
+
+                              if (this->tail == target.get()) {
+                                        this->tail = target->right.get();
+                              }
+                              break;
                     }
           }
 }

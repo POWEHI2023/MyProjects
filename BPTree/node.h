@@ -21,9 +21,10 @@ class Node;
  * @param next_leaf (Just used in LeafNode) point to next LeafNode
  * @param limit Avoid reptating caculate, represent underlimit of key number for each node
  * @param parent Point to upper layer InnerNode, the value is nullptr for root node
- * @param is_root If `true`, m and limit have no force to current node,
+ * @param _is_root If `true`, m and limit have no force to current node,
  *                when current is InnerNode, at least 2 elements and 2 links,
  *                when current is LeafNode, at least 0 element.
+ * @param type The type for current node
  */
 template <typename T, uint32_t m>
 class Node {
@@ -123,5 +124,5 @@ private:
           }
 public:
           unsigned char _type { LeafNode };
-          bool is_root { false };
+          bool _is_root { false };
 };

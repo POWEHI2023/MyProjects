@@ -46,8 +46,16 @@ BSTNode<Type>* BSTNode<Type>::create_node_(const Type& relem, const BSTNode* lef
 { return new BSTNode(relem, left, right); }
 
 template <typename Type>
+BSTNode<Type>* BSTNode<Type>::create_node_(const Type&& relem, const BSTNode* left, const BSTNode* right) 
+{ return new BSTNode(std::move(relem), left, right); }
+
+template <typename Type>
 const std::shared_ptr<BSTNode<Type>> BSTNode<Type>::create_node(const Type& relem, const BSTNode<Type>* left, const BSTNode<Type>* right) 
 { return std::shared_ptr<BSTNode<Type>>(BSTNode<Type>::create_node_(relem, left, right), BSTNode<Type>::release_node); }
+
+template <typename Type>
+const std::shared_ptr<BSTNode<Type>> BSTNode<Type>::create_node(const Type&& relem, const BSTNode<Type>* left, const BSTNode<Type>* right) 
+{ return std::shared_ptr<BSTNode<Type>>(BSTNode<Type>::create_node_(std::move(relem), left, right), BSTNode<Type>::release_node); }
 
 template <typename Type>
 void BSTNode<Type>::release_node(const BSTNode* bst) 
