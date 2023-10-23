@@ -40,25 +40,26 @@ void Element<KeyType, ValueType>::operator=(const Element&& elem) {
  * For Node
  */
 
-template <typename T, uint m>
-Node<T, m>::Node(const Node* node):
-_type(node->_type), _is_root(node->_is_root), next_leaf(node->next_leaf), before_leaf(node->before_leaf), parent(node->parent) 
+template <typename T, typename V, uint m>
+Node<T, V, m>::Node(const Node* node): list((T*)malloc(sizeof(T) * m)), value((T*)malloc(sizeof(V) * m)),
+_type(node->_type), next_leaf(node->next_leaf), before_leaf(node->before_leaf), parent(node->parent) 
 { copy_list(*node); }
 
-template <typename T, uint m>
-Node<T, m>::Node(const Node& node):
-_type(node._type), _is_root(node._is_root), next_leaf(node.next_leaf), before_leaf(node->before_leaf), parent(node.parent) 
+template <typename T, typename V, uint m>
+Node<T, V, m>::Node(const Node& node): list((T*)malloc(sizeof(T) * m)), value((T*)malloc(sizeof(V) * m)),
+_type(node._type), next_leaf(node.next_leaf), before_leaf(node.before_leaf), parent(node.parent) 
 { copy_list(node); }
 
-template <typename T, uint m>
-Node<T, m>::Node(const Node&& node):
-_type(std::move(node._type)), _is_root(std::move(node._is_root)),
-next_leaf(std::move(node.next_leaf)), before_leaf(std::move(node->before_leaf)), parent(std::move(node.parent))
+template <typename T, typename V, uint m>
+Node<T, V, m>::Node(const Node&& node): 
+_type(std::move(node._type)),
+next_leaf(std::move(node.next_leaf)), before_leaf(std::move(node.before_leaf)), parent(std::move(node.parent))
 { copy_list(std::move(node)); }
 
-template <typename T, uint m>
-Node<T, m>::~Node() { 
+template <typename T, typename V, uint m>
+Node<T, V, m>::~Node() { 
           free_list();
+          free_value();
           if (next_leaf != nullptr && before_leaf != nullptr) {
                     before_leaf->next_leaf = next_leaf; 
                     next_leaf->before_leaf = before_leaf;
@@ -70,73 +71,62 @@ Node<T, m>::~Node() {
 }
 
 /**
- * Function part
+ * Basic tool functions part
  */
 
-template <typename T, uint m>
-T& Node<T, m>::operator[](uint index) {
+template <typename T, typename V, uint m>
+decltype(auto) Node<T, V, m>::operator[](uint index) {
           if (index < 0 || index >= crt_size) {
                     printf("Outof bound of current node. operator[%d]\n", index);
                     exit(1);
           }
 
-          return list[index];
+          return (std::pair{ list[index], value[index] });
 }
 
-template <typename T, uint m>
-const Node<T, m>* Node<T, m>::insert(const T& elem) {
-          if (crt_size == m) {
-                    // 拆分，给后一个节点插入elem，给父节点插入新key和新list(一个Element)
-                    auto [left, right] = split();
-                    parend_element->key = *(static_cast<typename T::key_type*>(left->get_key()));
-
-                    (static_cast<Node<T, m>*>(right))->insert(elem);
-                    return parent->insert(make_inner_element(*(static_cast<typename T::key_type*>(right->get_key())), right));
-          } else {
-                    // 选择一个位置插入
-                    int pst = 0;
-                    for (; pst < crt_size && list[pst] < elem; ++pst) { }
-                    uint ptr = crt_size;
-                    while (ptr > pst) list[ptr] = std::move(list[ptr - 1]);
-                    list[pst] = elem;
-                    return nullptr;
-          }
-}
-
-template <typename T, uint m>
-uint32_t Node<T, m>::find_key(const T& elem) const {
+template <typename T, typename V, uint m>
+uint Node<T, V, m>::find_key(const T& elem) const {
           for (int i = 0; i < crt_size; ++i) {
                     if (list[i] == elem) return i;
           }
           return -1;
 }
 
-template <typename T, uint m>
-uint32_t Node<T, m>::find_key(const T* elem) const { find_key(*elem); }
+/**
+ * Basic functions part
+ */
 
-template <typename T, uint m>
-const AbstractNode* Node<T, m>::find_neighbour(const uint32_t index) const {
-          if (index < 0 || index >= crt_size) return nullptr;
-          if (index - 1 >= 0 && list[index - 1].value.size() <= limit) {
-                    return &list[index - 1];
-          } else if (index + 1 < crt_size && list[index + 1].value.size() <= limit) {
-                    return &list[index + 1];
-          } else {
-                    return nullptr;
+template <typename T, typename V, uint m>
+const void Node<T, V, m>::insert(const T& elem, const V& val) {
+          if (crt_size == m) {
+                    printf("Insert Error: Full size!.\n");
+                    exit(1);
           }
+
+          uint pst = 0, ptr = crt_size;
+          while (pst < crt_size && list[pst] < elem) pst++;
+          while (ptr > pst) {
+                    list[ptr] = std::move(list[ptr - 1]);
+                    value[ptr] = std::move(value[ptr - 1]);
+                    ptr--;
+          }
+          list[pst] = elem;
+          value[pst] = val;
+
+          crt_size++;
 }
 
-template <typename T, uint m>
-const typename Node<T, m>::Deliver Node<T, m>::split() {
+template <typename T, typename V, uint m>
+const typename Node<T, V, m>::Deliver Node<T, V, m>::split() {
+          return {nullptr, nullptr};
+}
+
+template <typename T, typename V, uint m>
+void Node<T, V, m>::erase(const uint32_t index) {
 
 }
 
-/*template <typename T, uint m>
-void Node<T, m>::erase(const uint32_t index) {
+template <typename T, typename V, uint m>
+void Node<T, V, m>::_force_del(const uint32_t index) {
 
 }
-
-template <typename T, uint m>
-void Node<T, m>::_force_del(const uint32_t index) {
-
-}*/

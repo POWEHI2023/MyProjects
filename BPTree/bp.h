@@ -5,17 +5,19 @@
 
 using uint = uint32_t;
 
-class AbstractNode;
-template <typename T, uint m>
+// class AbstractNode;
+template <typename T, typename V, uint m = 5>
 class Node;
-template <typename T, uint m = 5>
+template <typename KeyType, typename ValueType>
+class Element;
+template <typename T, typename V, uint m = 5>
 class BPTree;
-template <typename T, uint m>
-using bpNode = std::shared_ptr<Node<T, m>>;
+template <typename T, typename V, uint m>
+using bpNode = std::shared_ptr<Node<T, V, m>>;
 
 enum class NodeType: uint8_t { LeafNode, InnerNode };
 
-class AbstractNode {
+/*class AbstractNode {
 public:
           AbstractNode();
           virtual ~AbstractNode();
@@ -24,7 +26,7 @@ public:
           typedef struct { const AbstractNode *left, *right; } Deliver;
 
           virtual const void* get_key() const = 0;
-          virtual const AbstractNode* find_neighbour(const uint index) const = 0;
+          // virtual const AbstractNode* find_neighbour(const uint index) const = 0;
           virtual const Deliver split() = 0;
           virtual size_t size() const = 0;
 
@@ -36,20 +38,20 @@ public:
                     printf("Can not call set_tombstone in AbstractNode.\n");
                     exit(1);
           }
-};
+};*/
 
-template <typename T, uint m>
-inline bool operator==(const Node<T, m>& x, const Node<T, m>& y) { return x.operator==(y); }
-template <typename T, uint m>
-inline bool operator!=(const Node<T, m>& x, const Node<T, m>& y) { return x.operator!=(y); }
-template <typename T, uint m>
-inline bool operator>(const Node<T, m>& x, const Node<T, m>& y) { return x.operator>(y); }
-template <typename T, uint m>
-inline bool operator>=(const Node<T, m>& x, const Node<T, m>& y) { return x.operator>=(y); }
-template <typename T, uint m>
-inline bool operator<(const Node<T, m>& x, const Node<T, m>& y) { return x.operator<(y); }
-template <typename T, uint m>
-inline bool operator<=(const Node<T, m>& x, const Node<T, m>& y) { return x.operator<=(y); }
+template <typename T, typename V, uint m>
+inline bool operator==(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator==(y); }
+template <typename T, typename V, uint m>
+inline bool operator!=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator!=(y); }
+template <typename T, typename V, uint m>
+inline bool operator>(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>(y); }
+template <typename T, typename V, uint m>
+inline bool operator>=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>=(y); }
+template <typename T, typename V, uint m>
+inline bool operator<(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<(y); }
+template <typename T, typename V, uint m>
+inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<=(y); }
 
 /**
  * Node for B+ tree, involve InnerNode and LeafNode
@@ -68,17 +70,23 @@ inline bool operator<=(const Node<T, m>& x, const Node<T, m>& y) { return x.oper
  * @param _type The type for current node
  * @param _destroyed Used for iterator or as a tombstone mark
  */
-template <typename T, uint m>
-class Node : public AbstractNode {
+template <typename T, typename V, uint m>
+class Node /*: public AbstractNode*/ {
 public:
-          Node *next_leaf = nullptr, before_leaf = nullptr, *parent = nullptr;
+          Node *next_leaf = nullptr, *before_leaf = nullptr, *parent = nullptr;
           T* parend_element = nullptr;
-          
+
+          NodeType _type { NodeType::LeafNode };
+          // bool _is_root { false };
+
           /**
            * Constructor for a new Node, default type is LeafNode
            * @param new_type Represent type for the constructed node
            */
-          Node(NodeType new_type = NodeType::LeafNode): _type(new_type) { if (m <= 0) exit(1); }
+          Node(NodeType new_type = NodeType::LeafNode): _type(new_type),
+          list((T*)malloc(sizeof(T) * m)), value((T*)malloc(sizeof(V) * m))
+          { if (m <= 0) exit(1); }
+
           virtual ~Node();
 
           Node(const Node*);
@@ -87,7 +95,7 @@ public:
           void operator=(const Node&) = delete;
           void operator=(const Node&&) = delete;
 
-          T& operator[](uint index);
+          decltype(auto) operator[](uint index);
 
           bool operator==(const Node& node) 
           { return comp(node, [](const T& _x, const T& _y){ return _x == _y; }); }
@@ -112,7 +120,7 @@ public:
            * @param elem The element which will be inserted into current node
            * @return Pointer to a new node if there is new node be constructed, or nullptr
            */
-          const Node* insert(const T& elem);
+          const void insert(const T& elem, const V& val);
 
           /**
            * Variable count of insert value, can be used when insert more than one elements
@@ -121,32 +129,15 @@ public:
            * @return Pointer to a new node if there is new node be constructed, or nullptr
            */
           template <typename... _Args>
-          const Node* insert(const T& elem, const _Args&... _args) {
-                    insert(elem);
+          const void insert(const T& elem , const V& val, const _Args&... _args) {
+                    insert(elem, val);
                     return insert(_args...);
           }
 
-          /**
-           * Find the index for elem in current node, return -1 when no matched element
-           * @param elem Target element will be located
-           */
           uint find_key(const T& elem) const;
-          uint find_key(const T* elem) const;
 
-          virtual const void* get_key() const override
-          { return static_cast<void*>(&list[crt_size - 1].key); }
-
-          /**
-           * Called when erase elements which cause need to merge sibling nodes, find the fittable node and return the pointer to that node
-           * @details
-           *        Visit from left sibling to right sibling, from the closest to the farest.
-           *        When the origin node is 3 and array is 1, 2, 3, 4, 5, the order is 2 -> 4 -> 1 -> 5 until find a fittable node
-           *        If cannot find a fittable node, then process the true merge which merge two node into one.
-           *        (Fake merge): Find a node has more than limit number elements, split one closest element into current node.
-           * @param index Stored key which represent to a next layer node.
-           * @return Pointer to the fittable neighbour node to merge.
-           */
-          virtual const AbstractNode* find_neighbour(const uint32_t index) const override;
+          virtual const T* get_key() const /*override*/
+          { return &list[crt_size - 1]; }
 
           /**
            * Erase a element in index.
@@ -155,12 +146,16 @@ public:
            *        Merge process as described in @cite{find_neighbour}
            * @param index Index for the element which will be erased.
            */
-          void erase(const uint32_t index);
+          void erase(const uint32_t index);       //***
 
-          virtual size_t size() const override { return crt_size; }
+          virtual size_t size() const /*override*/ { return crt_size; }
+          constexpr uint capacity() const noexcept { return m; }
+
+          typedef struct { const Node *left, *right; } Deliver;
 private:
           size_t crt_size = 0;
           T* list = nullptr;
+          V* value = nullptr;
 
           uint32_t limit = (m + 1) / 2;
 
@@ -172,13 +167,13 @@ private:
            *        Insert into new element into the node with floor number of elements, 
            *        then the element number for two nodes is limie and m - limit + 1
            */
-          virtual const Deliver split() override;
+          virtual const Deliver split() /*override*/;       //***
 
           /**
            * Delete element in index without other process
            * @param index The index will be force deleted in current node
            */
-          virtual void _force_del(const uint32_t index) override;
+          virtual void _force_del(const uint32_t index) /*override*/; //***
 
           /**
            * Used when delete multiple elements one time
@@ -206,7 +201,13 @@ private:
                     if (list != nullptr) free_list();
                     else list = static_cast<T*>(malloc(m * sizeof(T)));
                     for (int i = 0; i < crt_size; ++i)
-                    list[i] = *(node.list[i]);
+                    list[i] = node.list[i];
+
+                    if (value != nullptr) free_value();
+                    else value = static_cast<T*>(malloc(m * sizeof(V)));
+                    for (int i = 0; i < crt_size; ++i)
+                    value[i] = node.value[i];
+
                     crt_size = node.crt_size;
           }
 
@@ -216,20 +217,27 @@ private:
                               free(list);
                     }
                     list = std::move(node.list);
+
+                    if (value != nullptr) {
+                              free_value();
+                              free(value);
+                    }
+                    value = std::move(node.value);
+
                     crt_size = std::move(node.crt_size);
           }
 
           void free_list() {
-                    for (int i = 0; i < crt_size; ++i)
-                    delete &list[i];
+                    // for (int i = 0; i < crt_size; ++i)
+                    // delete &list[i];
+          }
+
+          void free_value() {
+                    // for (int i = 0; i < crt_size; ++i)
+                    // delete &value[i];
           }
 public:
-          NodeType _type { NodeType::LeafNode };
-          bool _is_root { false };
-          // Tombstone mark
-          // bool _destroyed { false };
-
-          friend class BPTree<T, m>;
+          friend class BPTree<T, V, m>;
 
           static const Node* create_node_ (NodeType type = NodeType::LeafNode)
           { return new Node(type); }
@@ -238,10 +246,10 @@ public:
                     for (T& elem : list) ret->insert(std::move(elem));
                     return std::move(ret);
           }
-          static const bpNode<T, m> create_node (NodeType type = NodeType::LeafNode) 
-          { return bpNode<T, m>(create_node_(type)); }
-          static const bpNode<T, m> create_node (std::initializer_list<T> list, NodeType type = NodeType::LeafNode)
-          { return bpNode<T, m>(create_node_(std::move(list), type)); }
+          static const bpNode<T, V, m> create_node (NodeType type = NodeType::LeafNode) 
+          { return bpNode<T, V, m>(create_node_(type)); }
+          static const bpNode<T, V, m> create_node (std::initializer_list<T> list, NodeType type = NodeType::LeafNode)
+          { return bpNode<T, V, m>(create_node_(std::move(list), type)); }
 };
 
 template <typename KeyType, typename ValueType>
@@ -264,23 +272,12 @@ struct Element {
           void operator=(const Element&);
           void operator=(const Element&&);
 
-          std::pair<KeyType&, ValueType&> get_content () 
+          std::pair<KeyType, ValueType> get_content () const
           { return {key, value}; }
 
           void set_key(const KeyType& key) { this->key = key; }
           void set_value(const ValueType& val) { this->value = val; }
 };
-
-template <typename KeyType, typename T, uint m>
-using InnerElement = Element<KeyType, Node<T, m>*>;
-template <typename KeyType, typename ValueType>
-using LeafElement = Element<KeyType, ValueType>;
-
-template <typename KeyType, typename T, uint m>
-inline decltype(auto) make_inner_element (const KeyType& key, const Node<T, m>* ptr);
-
-template <typename KeyType, typename ValueType>
-inline decltype(auto) make_leaf_element (const KeyType& key, const ValueType& value);
 
 /**
  * Compare operations for 
@@ -319,12 +316,12 @@ inline bool operator<=(const Element<KeyType, ValueType>& x, const Element<KeyTy
 /**
  * B+ Tree Entity
  */
-template <typename T, uint m>
+template <typename T, typename V, uint m>
 class BPTree {
 public:
 
 private:
-          bpNode<T, m> root;
+          bpNode<T, V, m> root;
 public:
 
 };
