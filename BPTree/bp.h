@@ -1,0 +1,330 @@
+#include <iostream>
+#include <stdlib.h>
+#include <memory.h>
+
+
+using uint = uint32_t;
+
+class AbstractNode;
+template <typename T, uint m>
+class Node;
+template <typename T, uint m = 5>
+class BPTree;
+template <typename T, uint m>
+using bpNode = std::shared_ptr<Node<T, m>>;
+
+enum class NodeType: uint8_t { LeafNode, InnerNode };
+
+class AbstractNode {
+public:
+          AbstractNode();
+          virtual ~AbstractNode();
+
+          // Deliver is used for split operator
+          typedef struct { const AbstractNode *left, *right; } Deliver;
+
+          virtual const void* get_key() const = 0;
+          virtual const AbstractNode* find_neighbour(const uint index) const = 0;
+          virtual const Deliver split() = 0;
+          virtual size_t size() const = 0;
+
+          virtual void _force_del(const uint index) {
+                    printf("Can not call _force_del in AbstractNode.\n");
+                    exit(1);
+          }
+          virtual bool set_tombstone(const uint index) {
+                    printf("Can not call set_tombstone in AbstractNode.\n");
+                    exit(1);
+          }
+};
+
+template <typename T, uint m>
+inline bool operator==(const Node<T, m>& x, const Node<T, m>& y) { return x.operator==(y); }
+template <typename T, uint m>
+inline bool operator!=(const Node<T, m>& x, const Node<T, m>& y) { return x.operator!=(y); }
+template <typename T, uint m>
+inline bool operator>(const Node<T, m>& x, const Node<T, m>& y) { return x.operator>(y); }
+template <typename T, uint m>
+inline bool operator>=(const Node<T, m>& x, const Node<T, m>& y) { return x.operator>=(y); }
+template <typename T, uint m>
+inline bool operator<(const Node<T, m>& x, const Node<T, m>& y) { return x.operator<(y); }
+template <typename T, uint m>
+inline bool operator<=(const Node<T, m>& x, const Node<T, m>& y) { return x.operator<=(y); }
+
+/**
+ * Node for B+ tree, involve InnerNode and LeafNode
+ * @details
+ * InnerNode: 
+ *        Key value & pointer to next layer nodes
+ * LeafNode: 
+ *        Key value and Real value (A block address or offset for a block)
+ * @param list Elements list, each element involve one Key and one Value
+ * @param next_leaf (Just used in LeafNode) point to next LeafNode
+ * @param limit Avoid reptating caculate, represent underlimit of key number for each node
+ * @param parent Point to upper layer InnerNode, the value is nullptr for root node
+ * @param _is_root If `true`, m and limit have no force to current node,
+ *                when current is InnerNode, at least 2 elements and 2 links,
+ *                when current is LeafNode, at least 0 element.
+ * @param _type The type for current node
+ * @param _destroyed Used for iterator or as a tombstone mark
+ */
+template <typename T, uint m>
+class Node : public AbstractNode {
+public:
+          Node *next_leaf = nullptr, before_leaf = nullptr, *parent = nullptr;
+          T* parend_element = nullptr;
+          
+          /**
+           * Constructor for a new Node, default type is LeafNode
+           * @param new_type Represent type for the constructed node
+           */
+          Node(NodeType new_type = NodeType::LeafNode): _type(new_type) { if (m <= 0) exit(1); }
+          virtual ~Node();
+
+          Node(const Node*);
+          Node(const Node&);
+          Node(const Node&&);
+          void operator=(const Node&) = delete;
+          void operator=(const Node&&) = delete;
+
+          T& operator[](uint index);
+
+          bool operator==(const Node& node) 
+          { return comp(node, [](const T& _x, const T& _y){ return _x == _y; }); }
+          bool operator!=(const Node& node) { return !operator==(node); }
+          bool operator>=(const Node& node)
+          { return comp(node, [](const T& _x, const T& _y){ return _x >= _y; }); }
+          bool operator<=(const Node& node)
+          { return comp(node, [](const T& _x, const T& _y){ return _x <= _y; }); }
+          bool operator>(const Node& node)
+          { return comp(node, [](const T& _x, const T& _y){ return _x > _y; }); }
+          bool operator<(const Node& node)
+          { return comp(node, [](const T& _x, const T& _y){ return _x < _y; }); }
+
+          /**
+           * Insert element into current node
+           * @details
+           *        1. If the number of elements in current node greater than `m`
+           *        2. Then split current current node into two nodes, one have limit number of elements, one have m - limit + 1 elements
+           *        3. Construct a Deliver struct, which have the last key in the first node, and two pointer point to the two nodes
+           *        4. Deliver the constructed to `parent` node if the parent pinter is not nullptr, or construct a new root
+           *        5. When insert complished, return the new root if a new root has been constructed or nullptr
+           * @param elem The element which will be inserted into current node
+           * @return Pointer to a new node if there is new node be constructed, or nullptr
+           */
+          const Node* insert(const T& elem);
+
+          /**
+           * Variable count of insert value, can be used when insert more than one elements
+           * @param elem The current element be inserted, with type T
+           * @param _args The other elements will be inserted, just have the same type with T, or trigger an error
+           * @return Pointer to a new node if there is new node be constructed, or nullptr
+           */
+          template <typename... _Args>
+          const Node* insert(const T& elem, const _Args&... _args) {
+                    insert(elem);
+                    return insert(_args...);
+          }
+
+          /**
+           * Find the index for elem in current node, return -1 when no matched element
+           * @param elem Target element will be located
+           */
+          uint find_key(const T& elem) const;
+          uint find_key(const T* elem) const;
+
+          virtual const void* get_key() const override
+          { return static_cast<void*>(&list[crt_size - 1].key); }
+
+          /**
+           * Called when erase elements which cause need to merge sibling nodes, find the fittable node and return the pointer to that node
+           * @details
+           *        Visit from left sibling to right sibling, from the closest to the farest.
+           *        When the origin node is 3 and array is 1, 2, 3, 4, 5, the order is 2 -> 4 -> 1 -> 5 until find a fittable node
+           *        If cannot find a fittable node, then process the true merge which merge two node into one.
+           *        (Fake merge): Find a node has more than limit number elements, split one closest element into current node.
+           * @param index Stored key which represent to a next layer node.
+           * @return Pointer to the fittable neighbour node to merge.
+           */
+          virtual const AbstractNode* find_neighbour(const uint32_t index) const override;
+
+          /**
+           * Erase a element in index.
+           * @details
+           *        Need to merge some other elements when necessary.
+           *        Merge process as described in @cite{find_neighbour}
+           * @param index Index for the element which will be erased.
+           */
+          void erase(const uint32_t index);
+
+          virtual size_t size() const override { return crt_size; }
+private:
+          size_t crt_size = 0;
+          T* list = nullptr;
+
+          uint32_t limit = (m + 1) / 2;
+
+          /**
+           * Split current node into two nodes with limit and m - limit + 1 elements respectively
+           * @details
+           *        Used when insert a new element, but have involve m elements, 
+           *        then split into two node, with floor(m / 2) and ceil(m / 2)
+           *        Insert into new element into the node with floor number of elements, 
+           *        then the element number for two nodes is limie and m - limit + 1
+           */
+          virtual const Deliver split() override;
+
+          /**
+           * Delete element in index without other process
+           * @param index The index will be force deleted in current node
+           */
+          virtual void _force_del(const uint32_t index) override;
+
+          /**
+           * Used when delete multiple elements one time
+           * @param first First index of multiple indexes
+           * @param others Indexes beside first in totle indexes
+           */
+          template <typename... _Args>
+          void _force_del(const uint32_t first, const _Args&... others) {
+                    _force_del(first);
+                    _force_del(others...);
+          }
+
+          inline bool comp(const Node& node, const std::function<bool(const T& _x, const T& _y)>& fn) {
+                    bool ret = crt_size == node.crt_size;
+                    if (!ret) {
+                              printf("Two compared Nodes have different size.\n");
+                              exit(1);
+                    }
+                    for (int i = 0; ret && i < crt_size; ++i)
+                    ret &= fn(list[i], node.list[i]);
+                    return std::move(ret);
+          }
+
+          inline void copy_list(const Node& node) {
+                    if (list != nullptr) free_list();
+                    else list = static_cast<T*>(malloc(m * sizeof(T)));
+                    for (int i = 0; i < crt_size; ++i)
+                    list[i] = *(node.list[i]);
+                    crt_size = node.crt_size;
+          }
+
+          inline void copy_list(const Node&& node) {
+                    if (list != nullptr) {
+                              free_list();
+                              free(list);
+                    }
+                    list = std::move(node.list);
+                    crt_size = std::move(node.crt_size);
+          }
+
+          void free_list() {
+                    for (int i = 0; i < crt_size; ++i)
+                    delete &list[i];
+          }
+public:
+          NodeType _type { NodeType::LeafNode };
+          bool _is_root { false };
+          // Tombstone mark
+          // bool _destroyed { false };
+
+          friend class BPTree<T, m>;
+
+          static const Node* create_node_ (NodeType type = NodeType::LeafNode)
+          { return new Node(type); }
+          static const Node* create_node_ (std::initializer_list<T> list, NodeType type = NodeType::LeafNode) {
+                    Node* ret = new Node(type);
+                    for (T& elem : list) ret->insert(std::move(elem));
+                    return std::move(ret);
+          }
+          static const bpNode<T, m> create_node (NodeType type = NodeType::LeafNode) 
+          { return bpNode<T, m>(create_node_(type)); }
+          static const bpNode<T, m> create_node (std::initializer_list<T> list, NodeType type = NodeType::LeafNode)
+          { return bpNode<T, m>(create_node_(std::move(list), type)); }
+};
+
+template <typename KeyType, typename ValueType>
+struct Element {
+          typedef KeyType key_type;
+          typedef ValueType value_type;
+
+          KeyType key;
+          ValueType value;
+          bool is_leaf { true } , tombstone { false };
+
+
+          Element(KeyType&& key, ValueType&& value, bool type);
+          ~Element() { }
+
+          Element(const Element*);
+          Element(const Element&);
+          Element(const Element&&);
+
+          void operator=(const Element&);
+          void operator=(const Element&&);
+
+          std::pair<KeyType&, ValueType&> get_content () 
+          { return {key, value}; }
+
+          void set_key(const KeyType& key) { this->key = key; }
+          void set_value(const ValueType& val) { this->value = val; }
+};
+
+template <typename KeyType, typename T, uint m>
+using InnerElement = Element<KeyType, Node<T, m>*>;
+template <typename KeyType, typename ValueType>
+using LeafElement = Element<KeyType, ValueType>;
+
+template <typename KeyType, typename T, uint m>
+inline decltype(auto) make_inner_element (const KeyType& key, const Node<T, m>* ptr);
+
+template <typename KeyType, typename ValueType>
+inline decltype(auto) make_leaf_element (const KeyType& key, const ValueType& value);
+
+/**
+ * Compare operations for 
+ *        Key2Key (Original involved) & 
+ *        Value2Value (If Value is pointer to a node, transfer pointer to uint32 and compare)
+ */
+
+template <typename KeyType, typename ValueType>
+inline bool operator==(const Element<KeyType, ValueType>& x, const Element<KeyType, ValueType>& y) {
+          return x.key == y.key;
+}
+template <typename KeyType, typename ValueType>
+inline bool operator!=(const Element<KeyType, ValueType>& x, const Element<KeyType, ValueType>& y) {
+          return x.key != y.key;
+}
+template <typename KeyType, typename ValueType>
+inline bool operator>(const Element<KeyType, ValueType>& x, const Element<KeyType, ValueType>& y) {
+          return x.key > y.key;
+}
+template <typename KeyType, typename ValueType>
+inline bool operator>=(const Element<KeyType, ValueType>& x, const Element<KeyType, ValueType>& y) {
+          return x.key >= y.key;
+}
+template <typename KeyType, typename ValueType>
+inline bool operator<(const Element<KeyType, ValueType>& x, const Element<KeyType, ValueType>& y) {
+          return x.key < y.key;
+}
+template <typename KeyType, typename ValueType>
+inline bool operator<=(const Element<KeyType, ValueType>& x, const Element<KeyType, ValueType>& y) {
+          return x.key <= y.key;
+}
+
+
+
+
+/**
+ * B+ Tree Entity
+ */
+template <typename T, uint m>
+class BPTree {
+public:
+
+private:
+          bpNode<T, m> root;
+public:
+
+};
