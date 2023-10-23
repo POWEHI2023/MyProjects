@@ -1,4 +1,5 @@
 #include "BSTTree/bst.cpp"
+#include "BPTree/bp.cpp"
 
 #include <gtest/gtest.h>
 
@@ -113,6 +114,52 @@ void tree_test() {
           printf("After\n");
 }
 
+void element_test() {
+          auto displayElement4ii = [](const Element<int, int>& x) {
+                    auto [k, v] = x.get_content();
+                    printf("Element{Key: %d : Value: %d}\n", k, v);
+          };
+          auto x = Element<int, int>(1, 0, true);
+          displayElement4ii(x);
+
+          x.set_key(2);
+          x.set_value(1);
+          displayElement4ii(x);
+}
+
+void node_test() {
+          auto displayNode4i5 = [](const Node<int, int>& node) {
+                    printf("Node size: %ld, Type: %s\n", node.size(),
+                              node._type == NodeType::LeafNode ? "Leaf node" : "Inner node");
+                    for (int i = 0; i < node.size(); ++i) {
+                              auto [k, v] = node[i];
+                              printf("``Key: %d : Value: %d\n", k, v);
+                    }
+                    
+          };
+
+          auto x = Node<int, int>();
+          x.insert(0, 0);
+          displayNode4i5(x);
+
+          auto y = Node<int, int>();
+          y.insert(-1, -1);
+          displayNode4i5(y);
+          y.insert(1, 1);
+
+          auto z(y);
+          z.insert(2, 2);
+          displayNode4i5(z);
+          
+          auto m = Node<int, int>(x);
+          displayNode4i5(m);
+
+          auto i = Node<int, int>::create_node(NodeType::LeafNode, -2, -2, -1, -1, 0, 0);
+          displayNode4i5(*i);
+}
+
 int main() {
-          tree_test();
+          //tree_test();
+          element_test();
+          node_test();
 }
