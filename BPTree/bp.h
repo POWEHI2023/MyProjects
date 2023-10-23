@@ -14,6 +14,8 @@ template <typename T, typename V, uint m = 5>
 class BPTree;
 template <typename T, typename V, uint m>
 using bpNode = std::shared_ptr<Node<T, V, m>>;
+template <typename T, typename Y>
+using bpElement = std::shared_ptr<Element<T, Y>>;
 
 enum class NodeType: uint8_t { LeafNode, InnerNode };
 
@@ -89,13 +91,13 @@ public:
 
           virtual ~Node();
 
-          Node(const Node*);
-          Node(const Node&);
-          Node(const Node&&);
+          explicit Node(const Node*);
+          explicit Node(const Node&);
+          explicit Node(const Node&&);
           void operator=(const Node&) = delete;
           void operator=(const Node&&) = delete;
 
-          decltype(auto) operator[](uint index);
+          decltype(auto) operator[](uint index) const;
 
           bool operator==(const Node& node) 
           { return comp(node, [](const T& _x, const T& _y){ return _x == _y; }); }
@@ -198,58 +200,69 @@ private:
           }
 
           inline void copy_list(const Node& node) {
-                    if (list != nullptr) free_list();
-                    else list = static_cast<T*>(malloc(m * sizeof(T)));
-                    for (int i = 0; i < crt_size; ++i)
+                    if (list == nullptr) 
+                    list = static_cast<T*>(malloc(m * sizeof(T)));
+
+                    for (int i = 0; i < node.crt_size; ++i)
                     list[i] = node.list[i];
 
-                    if (value != nullptr) free_value();
-                    else value = static_cast<T*>(malloc(m * sizeof(V)));
-                    for (int i = 0; i < crt_size; ++i)
+                    if (value == nullptr) 
+                    value = static_cast<T*>(malloc(m * sizeof(V)));
+
+                    for (int i = 0; i < node.crt_size; ++i)
                     value[i] = node.value[i];
 
                     crt_size = node.crt_size;
           }
 
           inline void copy_list(const Node&& node) {
-                    if (list != nullptr) {
-                              free_list();
-                              free(list);
-                    }
+                    if (list != nullptr) free(list);
                     list = std::move(node.list);
 
-                    if (value != nullptr) {
-                              free_value();
-                              free(value);
-                    }
+                    if (value != nullptr) free(value);
                     value = std::move(node.value);
 
                     crt_size = std::move(node.crt_size);
           }
-
-          void free_list() {
-                    // for (int i = 0; i < crt_size; ++i)
-                    // delete &list[i];
-          }
-
-          void free_value() {
-                    // for (int i = 0; i < crt_size; ++i)
-                    // delete &value[i];
-          }
 public:
           friend class BPTree<T, V, m>;
 
+          /**
+           * Create functions, it is advisable to use this function to create bpNode than manully construct.
+           * @details
+           *        User can deliver series of key
+           */ 
+
           static const Node* create_node_ (NodeType type = NodeType::LeafNode)
           { return new Node(type); }
-          static const Node* create_node_ (std::initializer_list<T> list, NodeType type = NodeType::LeafNode) {
+
+          template <typename... _Args>
+          static const Node* create_node_ (NodeType type, const _Args&... _args) {
+                    size_t size = sizeof...(_args) / 2;
+                    if (size > m) {
+                              printf("Too many arguments given(%ld) than template size m(%d)\n", size, m);
+                              exit(1);
+                    }
+
                     Node* ret = new Node(type);
-                    for (T& elem : list) ret->insert(std::move(elem));
+                    ret->insert(_args...);
                     return std::move(ret);
           }
+
           static const bpNode<T, V, m> create_node (NodeType type = NodeType::LeafNode) 
           { return bpNode<T, V, m>(create_node_(type)); }
-          static const bpNode<T, V, m> create_node (std::initializer_list<T> list, NodeType type = NodeType::LeafNode)
-          { return bpNode<T, V, m>(create_node_(std::move(list), type)); }
+
+          template <typename... _Args>
+          static const bpNode<T, V, m> create_node (NodeType type, const _Args&... _args) {
+                    size_t size = sizeof...(_args) / 2;
+                    if (size > m) {
+                              printf("Too many arguments given(%ld) than template size m(%d)\n", size, m);
+                              exit(1);
+                    }
+                    auto ret = bpNode<T, V, m>(const_cast<Node*>(create_node_(type))); 
+                    ret->insert(_args...);
+                    return std::move(ret);
+          }
 };
 
 template <typename KeyType, typename ValueType>
@@ -277,6 +290,11 @@ struct Element {
 
           void set_key(const KeyType& key) { this->key = key; }
           void set_value(const ValueType& val) { this->value = val; }
+
+          static const Element* create_element_ (const KeyType& key, const ValueType& val);
+          static const Element* create_element_ (const KeyType&& key, const ValueType&& val);
+          static const bpElement<KeyType, ValueType> create_element (const KeyType& key, const ValueType& val);
+          static const bpElement<KeyType, ValueType> create_element (const KeyType&& key, const ValueType&& val);
 };
 
 /**

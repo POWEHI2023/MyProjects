@@ -58,8 +58,9 @@ next_leaf(std::move(node.next_leaf)), before_leaf(std::move(node.before_leaf)), 
 
 template <typename T, typename V, uint m>
 Node<T, V, m>::~Node() { 
-          free_list();
-          free_value();
+          if (list != nullptr) free(list);
+          if (value != nullptr) free(value);
+          
           if (next_leaf != nullptr && before_leaf != nullptr) {
                     before_leaf->next_leaf = next_leaf; 
                     next_leaf->before_leaf = before_leaf;
@@ -75,7 +76,7 @@ Node<T, V, m>::~Node() {
  */
 
 template <typename T, typename V, uint m>
-decltype(auto) Node<T, V, m>::operator[](uint index) {
+decltype(auto) Node<T, V, m>::operator[](uint index) const {
           if (index < 0 || index >= crt_size) {
                     printf("Outof bound of current node. operator[%d]\n", index);
                     exit(1);
