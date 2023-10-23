@@ -228,7 +228,7 @@ public:
           friend class BPTree<T, V, m>;
 
           /**
-           * Create functions, it is advisable to use this function to create bpNode than manully construct.
+           * Create functions, it is advisable to use these function to create bpNode than manully construct Node.
            * @details
            *        User can deliver series of key
            */ 
