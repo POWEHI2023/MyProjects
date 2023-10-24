@@ -75,6 +75,8 @@ inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return 
 template <typename T, typename V, uint m>
 class Node /*: public AbstractNode*/ {
 public:
+          typedef struct { const Node *left, *right; } Deliver;
+          
           Node *next_leaf = nullptr, *before_leaf = nullptr, *parent = nullptr;
           T* parend_element = nullptr;
 
@@ -136,31 +138,6 @@ public:
                     return insert(_args...);
           }
 
-          uint find_key(const T& elem) const;
-
-          virtual const T* get_key() const /*override*/
-          { return &list[crt_size - 1]; }
-
-          /**
-           * Erase a element in index.
-           * @details
-           *        Need to merge some other elements when necessary.
-           *        Merge process as described in @cite{find_neighbour}
-           * @param index Index for the element which will be erased.
-           */
-          void erase(const uint32_t index);       //***
-
-          virtual size_t size() const /*override*/ { return crt_size; }
-          constexpr uint capacity() const noexcept { return m; }
-
-          typedef struct { const Node *left, *right; } Deliver;
-private:
-          size_t crt_size = 0;
-          T* list = nullptr;
-          V* value = nullptr;
-
-          uint32_t limit = (m + 1) / 2;
-
           /**
            * Split current node into two nodes with limit and m - limit + 1 elements respectively
            * @details
@@ -170,6 +147,31 @@ private:
            *        then the element number for two nodes is limie and m - limit + 1
            */
           virtual const Deliver split() /*override*/;       //***
+
+          uint find_key(const T& elem) const;
+
+          virtual const T get_key() const /*override*/
+          { return list[crt_size - 1]; }
+
+          /**
+           * Erase a element in index.
+           * @details
+           *        Need to merge some other elements when necessary.
+           *        Merge process as described in @cite{find_neighbour}
+           * @param index Index for the element which will be erased.
+           */
+          size_t erase(const uint32_t index);       //***
+
+          virtual const Deliver merge ();
+
+          virtual size_t size() const /*override*/ { return crt_size; }
+          constexpr uint capacity() const noexcept { return m; }
+private:
+          size_t crt_size = 0;
+          T* list = nullptr;
+          V* value = nullptr;
+
+          uint32_t limit = (m + 1) / 2;
 
           /**
            * Delete element in index without other process

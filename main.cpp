@@ -156,6 +156,12 @@ void node_test() {
 
           auto i = Node<int, int>::create_node(NodeType::LeafNode, -2, -2, -1, -1, 0, 0);
           displayNode4i5(*i);
+          i->erase(1);
+          displayNode4i5(*i);
+          i->erase(1);
+          displayNode4i5(*i);
+          i->erase(0);
+          displayNode4i5(*i);
 }
 
 int main() {
