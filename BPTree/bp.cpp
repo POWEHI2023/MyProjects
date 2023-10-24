@@ -58,8 +58,6 @@ next_leaf(std::move(node.next_leaf)), before_leaf(std::move(node.before_leaf)), 
 
 template <typename T, typename V, uint m>
 Node<T, V, m>::~Node() { 
-          // if (list != nullptr) free(list);
-          // if (value != nullptr) free(value);
           list.clear();
           value.clear();
           next.clear();
@@ -98,15 +96,18 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) {
                               printf("Error: Split get a null pointer.\n");
                               exit(1);
                     }
+
                     if (parent != nullptr) {
                               uint pos = parent->find_key(ret->get_key());
                               parent->change_key(pos, get_key());
 
-                              ret->insert(elem, val);
-                              parent->insert(pos + 1, ret);
-                              return nullptr;
+                              if (elem < this->get_key()) this->insert(elem, val);
+                              else ret->insert(elem, val);
+
+                              return std::move(parent->insert(ret->get_key(), ret));
                     } else {
-                              ret->insert(elem, val);
+                              if (elem < this->get_key()) this->insert(elem, val);
+                              else ret->insert(elem, val);
                               return ret;
                     }
           }
@@ -131,8 +132,6 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
           node->parent = this;
 
           if (crt_size == m) {
-                    /*printf("Insert Error: Full size!.\n");
-                    exit(1);*/
                     auto ret = split();
                     if (ret == nullptr) {
                               printf("Error: Split get a null pointer.\n");
@@ -142,11 +141,13 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
                               uint pos = parent->find_key(ret->get_key());
                               parent->change_key(pos, get_key());
 
-                              ret->insert(elem, node);
-                              parent->insert(pos + 1, ret);
-                              return nullptr;
+                              if (elem < this->get_key()) this->insert(elem, node);
+                              else ret->insert(elem, node);
+
+                              return std::move(parent->insert(ret->get_key(), ret));
                     } else {
-                              ret->insert(elem, node);
+                              if (elem < this->get_key()) this->insert(elem, node);
+                              else ret->insert(elem, node);
                               return ret;
                     }
           }
@@ -183,7 +184,7 @@ const bpNode<T, V, m> Node<T, V, m>::split() {
           }
           crt_size = limit;
 
-          new_node->parent = parent;
+          // new_node->parent = parent;
           new_node->next_leaf = next_leaf;
           if (next_leaf != nullptr) next_leaf->before_leaf = new_node.get();
           new_node->before_leaf = this;
@@ -231,12 +232,6 @@ void Node<T, V, m>::merge() {
                     else this->insert(k, v._n);
 
                     before_leaf->erase(before_leaf->size() - 1);
-
-                    // 修改父节点中左节点的索引值
-                    // uint pos = parent->find_key(k);
-                    // for (; k != parent->list[pos] && pos < parent->list.size(); ++pos) { }
-                    // parent->change_key(pos, before_leaf->get_key());
-
                     return;
           } 
           if (next_leaf != nullptr && next_leaf->size() > limit) {
@@ -246,18 +241,12 @@ void Node<T, V, m>::merge() {
                     else this->insert(k, v._n);
 
                     next_leaf->erase(0);
-
-                    // 修改父节点中当前节点的索引值
-                    // uint pos = parent->find_key(list[list.size() - 2]);
-                    // for (; list[list.size() - 2] != parent->list[pos] && pos < parent->list.size(); ++pos) { }
-                    // parent->change_key(pos, k);
-
                     return;
           }
           // 优先把左边的节点合并到一起, 向左合并
           if (before_leaf != nullptr) {
                     uint pos = parent->find_key(get_key());
-                    
+
                     for (int i = 0; i < crt_size; ++i) {
                               auto [k, v, t] = this->operator[](i);
                               if (t) before_leaf->insert(k, v._v);
@@ -280,9 +269,6 @@ void Node<T, V, m>::merge() {
                               if (t) this->insert(k, v._v);
                               else this->insert(k, v._n);
                     }
-                    // uint pos = 0;
-                    // for (; parent->list[pos] != get_key(); ++pos) { }
-                    // parent->change_key(pos, next_leaf->get_key());
 
                     next_leaf->before_leaf = before_leaf;
                     if (before_leaf != nullptr) before_leaf->next_leaf = next_leaf;
@@ -296,3 +282,75 @@ void Node<T, V, m>::merge() {
           exit(1);
 }
 
+
+/**
+ * B+ Tree Entity
+ */
+
+template <typename T, typename V, uint m>
+BPTree<T, V, m>::BPTree(): root(Node<T, V, m>::create_node(NodeType::LeafNode))
+{ root->_is_root = true; }
+
+template <typename T, typename V, uint m>
+BPTree<T, V, m>::~BPTree() { }
+
+template <typename T, typename V, uint m>
+bool BPTree<T, V, m>::is_empty() const noexcept 
+{ return root == nullptr || root->size() == 0; }
+
+template <typename T, typename V, uint m>
+std::vector<V> BPTree<T, V, m>::serialize() const {
+          auto cpy = root.get();
+          while (cpy->_type == NodeType::InnerNode) cpy = cpy->next[0].get();
+          std::vector<V> ret;
+          while (cpy != nullptr) {
+                    for (auto each : cpy->value)
+                    ret.push_back(each);
+
+                    cpy = cpy->next_leaf;
+          }
+          return std::move(ret);
+}
+
+template <typename T, typename V, uint m>
+void BPTree<T, V, m>::insert(const T& key, const V& val) {
+          bpNode<T, V, m> ret = nullptr;
+          {
+                    Node<T, V, m>* cpy = root.get();
+                    while (cpy->_type != NodeType::LeafNode) {
+                              uint pos = 0;
+                              while (pos < cpy->size() && cpy->list[pos] < key) {
+                                        pos++;
+                              }
+                              cpy = cpy->next[pos < cpy->size() ? pos : pos - 1].get();
+                    }
+
+                    // cpy is a LeafNode
+                    ret = cpy->insert(key, val);
+          }
+
+          if (ret != nullptr) {
+                    bpNode<T, V, m> new_root = Node<T, V, m>::create_node(NodeType::InnerNode);
+                    new_root->_is_root = true;
+                    new_root->insert(root->get_key(), root);
+
+                    new_root->insert(ret->get_key(), ret);
+
+                    root = std::move(new_root);
+          }
+}
+
+template <typename T, typename V, uint m>
+bool BPTree<T, V, m>::erase(const T& key) {
+          return false;
+}
+
+template <typename T, typename V, uint m>
+bool BPTree<T, V, m>::tombstone(const T& key) {
+          return false;
+}
+
+template <typename T, typename V, uint m>
+bool BPTree<T, V, m>::exist(const T& key) {
+          return false;
+}

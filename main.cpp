@@ -208,9 +208,75 @@ void node_test2 () {
           displayNode4i5(*root);
 }
 
+void bp_test() {
+          BPTree<int, int, 5> bp;
+          bp.insert(1,1);
+          bp.insert(2,2);
+          bp.insert(3,3);
+          bp.insert(4,4);
+          bp.insert(5,5);
+
+          auto arr = bp.serialize();
+          display(arr);
+
+          bp.insert(6,6);
+          arr = bp.serialize();
+          display(arr);
+          bp.insert(7,7);
+          arr = bp.serialize();
+          display(arr);
+
+          bp.insert(8,8);
+          arr = bp.serialize();
+          display(arr);
+          bp.insert(9,9);
+          arr = bp.serialize();
+          display(arr);
+          bp.insert(10,10);
+          arr = bp.serialize();
+          display(arr);
+          bp.insert(11,11);
+          arr = bp.serialize();
+          display(arr);
+
+          bp.insert(0,0);
+          arr = bp.serialize();
+          display(arr);
+
+          bp.insert(-1,-1);
+          arr = bp.serialize();
+          display(arr);
+
+          bp.insert(-5,-5);
+          arr = bp.serialize();
+          display(arr);
+
+          bp.insert(-3,-3);
+          arr = bp.serialize();
+          display(arr);
+
+          bp.insert(12,12);
+          arr = bp.serialize();
+          display(arr);
+
+          bp.insert(13,13);
+          arr = bp.serialize();
+          display(arr);
+          bp.insert(14,14);
+          arr = bp.serialize();
+          display(arr);
+
+          /*for (int i = 15; i < 100; ++i) {
+                    bp.insert(i,i);
+                    arr = bp.serialize();
+                    display(arr);
+          }*/
+}
+
 int main() {
           //tree_test();
-          element_test();
-          node_test();
-          node_test2();
+          // element_test();
+          // node_test();
+          // node_test2();
+          bp_test();
 }

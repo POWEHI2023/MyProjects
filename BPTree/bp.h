@@ -387,9 +387,37 @@ inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return 
 template <typename T, typename V, uint m>
 class BPTree {
 public:
-
           BPTree();
+          ~BPTree();
 
+          class iterator {
+          public:
+                    iterator(const Node<T, V, m>* node);
+                    ~iterator();
+
+                    const iterator operator++();
+                    iterator& operator++(int);
+                    const iterator operator--();
+                    iterator& operator--(int);
+          private:
+                    Node<T, V, m>* node;
+                    uint ptr;
+          public:
+          };
+
+          bool is_empty() const noexcept;
+          void insert(const T& key, const V& val);
+          /**
+           * 如果存在则设置，如果不存在则返回false
+           */
+          bool tombstone(const T& key);
+          /**
+           * 如果存在则删除，如果不存在则返回false
+           */
+          bool erase(const T& key);
+          bool exist(const T& key);
+
+          std::vector<V> serialize() const;
 private:
           bpNode<T, V, m> root;
 public:
