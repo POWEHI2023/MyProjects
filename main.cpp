@@ -132,8 +132,8 @@ void node_test() {
                     printf("Node size: %ld, Type: %s\n", node.size(),
                               node._type == NodeType::LeafNode ? "Leaf node" : "Inner node");
                     for (int i = 0; i < node.size(); ++i) {
-                              auto [k, v] = node[i];
-                              printf("``Key: %d : Value: %d\n", k, v);
+                              auto [k, v, t] = node[i];
+                              if (t) printf("``Key: %d : Value: %d\n", k, v._v);
                     }
                     
           };
@@ -155,6 +155,8 @@ void node_test() {
           displayNode4i5(m);
 
           auto i = Node<int, int>::create_node(NodeType::LeafNode, -2, -2, -1, -1, 0, 0);
+          i->_is_root = true;
+          
           displayNode4i5(*i);
           i->erase(1);
           displayNode4i5(*i);
@@ -166,6 +168,6 @@ void node_test() {
 
 int main() {
           //tree_test();
-          element_test();
+          // element_test();
           node_test();
 }

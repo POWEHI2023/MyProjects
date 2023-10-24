@@ -66,15 +66,23 @@ public:
           Node *next_leaf = nullptr, *before_leaf = nullptr, *parent = nullptr;
 
           NodeType _type { NodeType::LeafNode };
-          // bool _is_root { false };
+          bool _is_root { false };
 
           /**
            * Constructor for a new Node, default type is LeafNode
            * @param new_type Represent type for the constructed node
            */
-          Node(NodeType new_type = NodeType::LeafNode): _type(new_type),
-          list((T*)malloc(sizeof(T) * m)), value((T*)malloc(sizeof(V) * m))
-          { if (m <= 0) exit(1); }
+          Node(NodeType new_type = NodeType::LeafNode): _type(new_type) { 
+                    if (m <= 0) exit(1); 
+                    list.reserve(m);
+                    if (_type == NodeType::LeafNode) {
+                              value.reserve(m);
+                    } else {
+                              next.reserve(m);
+                    }
+          }
+          // list((T*)malloc(sizeof(T) * m)), value((T*)malloc(sizeof(V) * m))
+
 
           virtual ~Node();
 
@@ -84,7 +92,39 @@ public:
           void operator=(const Node&) = delete;
           void operator=(const Node&&) = delete;
 
-          decltype(auto) operator[](uint index) const;
+          struct RET { 
+                    union two4one {
+                              V _v;
+                              bpNode<T, V, m> _n;
+
+                              two4one() { }
+                              ~two4one() { }
+                    };
+
+                    T x; 
+                    two4one y;
+                    bool _leaf;
+                    RET(const T& x, const V& v) {
+                              this->x = x;
+                              y._v = v;
+                              _leaf = true;
+                    }
+                    RET(const T& x, const bpNode<T, V, m>& v) {
+                              this->x = x;
+                              y._n = v;
+                              _leaf = false;
+                    }
+                    ~RET() { }
+          };
+          const RET operator[](uint index) const {
+                    if (index < 0 || index >= crt_size) {
+                              printf("Outof bound of current node. operator[%d]\n", index);
+                              exit(1);
+                    }
+                    if (_type == NodeType::LeafNode)
+                    return { list[index], value[index] };
+                    else return { list[index], next[index] };
+          }
 
           bool operator==(const Node& node) 
           { return comp(node, [](const T& _x, const T& _y){ return _x == _y; }); }
@@ -109,7 +149,13 @@ public:
            * @param elem The element which will be inserted into current node
            * @return Pointer to a new node if there is new node be constructed, or nullptr
            */
-          const void insert(const T& elem, const V& val);
+          const bpNode<T, V, m> insert(const T& elem, const V& val);
+
+          const bpNode<T, V, m> insert(const T& elem, const bpNode<T, V, m>& node);
+
+          void change_key(const uint pos, const T& key) {
+                    list[pos] = key;
+          }
 
           /**
            * Variable count of insert value, can be used when insert more than one elements
@@ -118,7 +164,7 @@ public:
            * @return Pointer to a new node if there is new node be constructed, or nullptr
            */
           template <typename... _Args>
-          const void insert(const T& elem , const V& val, const _Args&... _args) {
+          const bpNode<T, V, m> insert(const T& elem , const V& val, const _Args&... _args) {
                     insert(elem, val);
                     return insert(_args...);
           }
@@ -131,7 +177,7 @@ public:
            *        Insert into new element into the node with floor number of elements, 
            *        then the element number for two nodes is limie and m - limit + 1
            */
-          virtual const Deliver split() /*override*/;       //***
+          virtual const bpNode<T, V, m> split() /*override*/;       //***
 
           uint find_key(const T& elem) const noexcept;
 
@@ -147,14 +193,16 @@ public:
            */
           size_t erase(const uint32_t index);       //***
 
-          virtual const Deliver merge ();
+          virtual void merge ();
 
           virtual size_t size() const noexcept /*override*/ { return crt_size; }
           constexpr uint capacity() const noexcept { return m; }
 private:
           size_t crt_size = 0;
-          T* list = nullptr;                      // Key list
-          V* value = nullptr;                     // Value Eitity
+          // T* list = nullptr;                      // Key list
+          // V* value = nullptr;                     // Value Eitity
+          std::vector<T> list;
+          std::vector<V> value;
           std::vector<bpNode<T, V, m>> next;      // Next layer Nodes
 
           uint32_t limit = (m + 1) / 2;
@@ -188,32 +236,16 @@ private:
           }
 
           inline void copy_list(const Node& node) {
-                    if (list == nullptr) 
-                    list = static_cast<T*>(malloc(m * sizeof(T)));
-
-                    for (int i = 0; i < node.crt_size; ++i)
-                    list[i] = node.list[i];
-
-                    if (value == nullptr) 
-                    value = static_cast<T*>(malloc(m * sizeof(V)));
-
-                    for (int i = 0; i < node.crt_size; ++i) 
-                    value[i] = node.value[i];
-                    
+                    list = node.list;
+                    value = node.value;
                     next = node.next;
-
                     crt_size = node.crt_size;
           }
 
           inline void copy_list(const Node&& node) {
-                    if (list != nullptr) free(list);
                     list = std::move(node.list);
-
-                    if (value != nullptr) free(value);
                     value = std::move(node.value);
-
                     next = std::move(node.next);
-
                     crt_size = std::move(node.crt_size);
           }
 public:
@@ -242,7 +274,7 @@ public:
           }
 
           static const bpNode<T, V, m> create_node (NodeType type = NodeType::LeafNode) 
-          { return bpNode<T, V, m>(create_node_(type)); }
+          { return bpNode<T, V, m>(const_cast<Node*>(create_node_(type))); }
 
           template <typename... _Args>
           static const bpNode<T, V, m> create_node (NodeType type, const _Args&... _args) {
