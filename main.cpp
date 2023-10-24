@@ -138,11 +138,11 @@ void node_test() {
                     
           };
 
-          auto x = Node<int, int>();
+          Node<int, int> x;
           x.insert(0, 0);
           displayNode4i5(x);
 
-          auto y = Node<int, int>();
+          Node<int, int> y;
           y.insert(-1, -1);
           displayNode4i5(y);
           y.insert(1, 1);
@@ -151,12 +151,12 @@ void node_test() {
           z.insert(2, 2);
           displayNode4i5(z);
           
-          auto m = Node<int, int>(x);
+          Node<int, int> m(x);
           displayNode4i5(m);
 
           auto i = Node<int, int>::create_node(NodeType::LeafNode, -2, -2, -1, -1, 0, 0);
           i->_is_root = true;
-          
+
           displayNode4i5(*i);
           i->erase(1);
           displayNode4i5(*i);
@@ -166,8 +166,51 @@ void node_test() {
           displayNode4i5(*i);
 }
 
+void node_test2 () {
+          auto displayNode4i5 = [](const Node<int, int>& node) {
+                    printf("Node size: %ld, Type: %s\n", node.size(),
+                              node._type == NodeType::LeafNode ? "Leaf node" : "Inner node");
+
+                    for (int i = 0; i < node.size(); ++i) {
+                              auto [k, v, t] = node[i];
+                              if (t) printf("``Key: %d : Value: %d\n", k, v._v);
+                              else {
+                                        printf("``Key: %d, Node Size: %ld\n", k, v._n->size());
+                              }
+                    }
+                    
+          };
+
+          auto i = Node<int, int>::create_node(NodeType::LeafNode, -2, -2, -1, -1, 0, 0);
+          i->insert(1, 1);
+          i->insert(2, 2);
+          displayNode4i5(*i);
+
+          auto ret = i->insert(3, 3);
+          displayNode4i5(*i); printf("\n");
+          displayNode4i5(*ret);
+
+          auto root = Node<int, int>::create_node(NodeType::InnerNode);
+          root->_is_root = true;
+
+          root->insert(i->get_key(), i);
+          root->insert(ret->get_key(), ret);
+          printf("\n");
+          displayNode4i5(*root);
+
+          ret->erase(2);
+          displayNode4i5(*root);
+          if (root->size() == 1 && root->_type == NodeType::InnerNode) {
+                    auto [k, v, t] = (*root)[0];
+                    root = v._n;
+                    root->_is_root = true;
+          }
+          displayNode4i5(*root);
+}
+
 int main() {
           //tree_test();
-          // element_test();
+          element_test();
           node_test();
+          node_test2();
 }

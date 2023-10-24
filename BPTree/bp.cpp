@@ -127,6 +127,9 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) {
 
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>& node) {
+          node->_is_root = false;
+          node->parent = this;
+
           if (crt_size == m) {
                     /*printf("Insert Error: Full size!.\n");
                     exit(1);*/
@@ -174,10 +177,11 @@ const bpNode<T, V, m> Node<T, V, m>::split() {
                     else new_node->insert(k, v._n);
           }
           for (int i = limit; i < crt_size; ++i) {
-                    if (list.size()) list.pop_back();
-                    if (value.size()) value.pop_back();
-                    if (next.size()) next.pop_back();
+                    list.pop_back();
+                    if (_type == NodeType::LeafNode) value.pop_back();
+                    else next.pop_back();
           }
+          crt_size = limit;
 
           new_node->parent = parent;
           new_node->next_leaf = next_leaf;
@@ -195,8 +199,9 @@ size_t Node<T, V, m>::erase(const uint32_t index) {
                     exit(1);
           }
           if (crt_size > 0) {
+                    if (index == crt_size - 1 && parent != nullptr)
+                    parent->change_key(parent->find_key(get_key()), list[crt_size - 2]);
                     list.erase(list.begin() + index);
-
                     if (_type == NodeType::LeafNode) value.erase(value.begin() + index);
                     else next.erase(next.begin() + index);
                     crt_size--;
@@ -228,9 +233,9 @@ void Node<T, V, m>::merge() {
                     before_leaf->erase(before_leaf->size() - 1);
 
                     // 修改父节点中左节点的索引值
-                    uint pos = 0;
-                    for (; k != parent->list[pos] && pos < parent->list.size(); ++pos) { }
-                    parent->change_key(pos, before_leaf->get_key());
+                    // uint pos = parent->find_key(k);
+                    // for (; k != parent->list[pos] && pos < parent->list.size(); ++pos) { }
+                    // parent->change_key(pos, before_leaf->get_key());
 
                     return;
           } 
@@ -243,43 +248,45 @@ void Node<T, V, m>::merge() {
                     next_leaf->erase(0);
 
                     // 修改父节点中当前节点的索引值
-                    uint pos = 0;
-                    for (; list[list.size() - 2] != parent->list[pos] && pos < parent->list.size(); ++pos) { }
-                    parent->change_key(pos, k);
+                    // uint pos = parent->find_key(list[list.size() - 2]);
+                    // for (; list[list.size() - 2] != parent->list[pos] && pos < parent->list.size(); ++pos) { }
+                    // parent->change_key(pos, k);
 
                     return;
           }
           // 优先把左边的节点合并到一起, 向左合并
           if (before_leaf != nullptr) {
+                    uint pos = parent->find_key(get_key());
+                    
                     for (int i = 0; i < crt_size; ++i) {
                               auto [k, v, t] = this->operator[](i);
                               if (t) before_leaf->insert(k, v._v);
                               else before_leaf->insert(k, v._n);
                     }
                     // 父节点中修改左节点的索引为当前节点的索引key，并在父节点中删除当前节点
-                    uint pos = 0;
-                    for (; parent->list[pos] != before_leaf->get_key(); ++pos) { }
-                    parent->change_key(pos, get_key());
 
                     before_leaf->next_leaf = next_leaf;
                     if (next_leaf != nullptr) next_leaf->before_leaf = before_leaf;
 
-                    parent->erase(pos + 1);
+                    parent->erase(pos);
 
                     return;
           }
           if (next_leaf != nullptr) {
+                    uint pos = parent->find_key(get_key());
+
                     for (int i = 0; i < next_leaf->crt_size; ++i) {
                               auto [k, v, t] = next_leaf->operator[](i);
                               if (t) this->insert(k, v._v);
                               else this->insert(k, v._n);
                     }
-                    uint pos = 0;
-                    for (; parent->list[pos] != get_key(); ++pos) { }
-                    parent->change_key(pos, next_leaf->get_key());
+                    // uint pos = 0;
+                    // for (; parent->list[pos] != get_key(); ++pos) { }
+                    // parent->change_key(pos, next_leaf->get_key());
 
                     next_leaf->before_leaf = before_leaf;
                     if (before_leaf != nullptr) before_leaf->next_leaf = next_leaf;
+
                     parent->erase(pos + 1);
 
                     return;

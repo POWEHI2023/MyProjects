@@ -68,11 +68,7 @@ public:
           NodeType _type { NodeType::LeafNode };
           bool _is_root { false };
 
-          /**
-           * Constructor for a new Node, default type is LeafNode
-           * @param new_type Represent type for the constructed node
-           */
-          Node(NodeType new_type = NodeType::LeafNode): _type(new_type) { 
+          Node(): _type(NodeType::LeafNode) {
                     if (m <= 0) exit(1); 
                     list.reserve(m);
                     if (_type == NodeType::LeafNode) {
@@ -81,7 +77,20 @@ public:
                               next.reserve(m);
                     }
           }
-          // list((T*)malloc(sizeof(T) * m)), value((T*)malloc(sizeof(V) * m))
+
+          /**
+           * Constructor for a new Node, default type is LeafNode
+           * @param new_type Represent type for the constructed node
+           */
+          Node(NodeType new_type): _type(new_type) { 
+                    if (m <= 0) exit(1); 
+                    list.reserve(m);
+                    if (_type == NodeType::LeafNode) {
+                              value.reserve(m);
+                    } else {
+                              next.reserve(m);
+                    }
+          }
 
 
           virtual ~Node();
@@ -93,7 +102,7 @@ public:
           void operator=(const Node&&) = delete;
 
           struct RET { 
-                    union two4one {
+                    struct two4one {
                               V _v;
                               bpNode<T, V, m> _n;
 
@@ -110,9 +119,12 @@ public:
                               _leaf = true;
                     }
                     RET(const T& x, const bpNode<T, V, m>& v) {
+                              
                               this->x = x;
+                              // printf("In Constructor1\n");
                               y._n = v;
                               _leaf = false;
+                              // printf("In Constructor2\n");
                     }
                     ~RET() { }
           };
@@ -123,7 +135,9 @@ public:
                     }
                     if (_type == NodeType::LeafNode)
                     return { list[index], value[index] };
-                    else return { list[index], next[index] };
+                    else {
+                              return { list[index], next[index] };
+                    }
           }
 
           bool operator==(const Node& node) 
