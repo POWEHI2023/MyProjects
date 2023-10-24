@@ -42,19 +42,6 @@ public:
           }
 };*/
 
-template <typename T, typename V, uint m>
-inline bool operator==(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator==(y); }
-template <typename T, typename V, uint m>
-inline bool operator!=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator!=(y); }
-template <typename T, typename V, uint m>
-inline bool operator>(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>(y); }
-template <typename T, typename V, uint m>
-inline bool operator>=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>=(y); }
-template <typename T, typename V, uint m>
-inline bool operator<(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<(y); }
-template <typename T, typename V, uint m>
-inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<=(y); }
-
 /**
  * Node for B+ tree, involve InnerNode and LeafNode
  * @details
@@ -76,9 +63,7 @@ template <typename T, typename V, uint m>
 class Node /*: public AbstractNode*/ {
 public:
           typedef struct { const Node *left, *right; } Deliver;
-          
           Node *next_leaf = nullptr, *before_leaf = nullptr, *parent = nullptr;
-          T* parend_element = nullptr;
 
           NodeType _type { NodeType::LeafNode };
           // bool _is_root { false };
@@ -148,9 +133,9 @@ public:
            */
           virtual const Deliver split() /*override*/;       //***
 
-          uint find_key(const T& elem) const;
+          uint find_key(const T& elem) const noexcept;
 
-          virtual const T get_key() const /*override*/
+          virtual const T get_key() const noexcept /*override*/
           { return list[crt_size - 1]; }
 
           /**
@@ -164,12 +149,13 @@ public:
 
           virtual const Deliver merge ();
 
-          virtual size_t size() const /*override*/ { return crt_size; }
+          virtual size_t size() const noexcept /*override*/ { return crt_size; }
           constexpr uint capacity() const noexcept { return m; }
 private:
           size_t crt_size = 0;
-          T* list = nullptr;
-          V* value = nullptr;
+          T* list = nullptr;                      // Key list
+          V* value = nullptr;                     // Value Eitity
+          std::vector<bpNode<T, V, m>> next;      // Next layer Nodes
 
           uint32_t limit = (m + 1) / 2;
 
@@ -177,7 +163,7 @@ private:
            * Delete element in index without other process
            * @param index The index will be force deleted in current node
            */
-          virtual void _force_del(const uint32_t index) /*override*/; //***
+          virtual void _force_del(const uint32_t index) = delete /*override*/; //***
 
           /**
            * Used when delete multiple elements one time
@@ -211,8 +197,10 @@ private:
                     if (value == nullptr) 
                     value = static_cast<T*>(malloc(m * sizeof(V)));
 
-                    for (int i = 0; i < node.crt_size; ++i)
+                    for (int i = 0; i < node.crt_size; ++i) 
                     value[i] = node.value[i];
+                    
+                    next = node.next;
 
                     crt_size = node.crt_size;
           }
@@ -223,6 +211,8 @@ private:
 
                     if (value != nullptr) free(value);
                     value = std::move(node.value);
+
+                    next = std::move(node.next);
 
                     crt_size = std::move(node.crt_size);
           }
@@ -331,6 +321,18 @@ inline bool operator<=(const Element<KeyType, ValueType>& x, const Element<KeyTy
 }
 
 
+template <typename T, typename V, uint m>
+inline bool operator==(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator==(y); }
+template <typename T, typename V, uint m>
+inline bool operator!=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator!=(y); }
+template <typename T, typename V, uint m>
+inline bool operator>(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>(y); }
+template <typename T, typename V, uint m>
+inline bool operator>=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>=(y); }
+template <typename T, typename V, uint m>
+inline bool operator<(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<(y); }
+template <typename T, typename V, uint m>
+inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<=(y); }
 
 
 /**
@@ -339,6 +341,8 @@ inline bool operator<=(const Element<KeyType, ValueType>& x, const Element<KeyTy
 template <typename T, typename V, uint m>
 class BPTree {
 public:
+
+          BPTree();
 
 private:
           bpNode<T, V, m> root;

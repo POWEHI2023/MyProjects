@@ -82,11 +82,11 @@ decltype(auto) Node<T, V, m>::operator[](uint index) const {
                     exit(1);
           }
 
-          return (std::pair{ list[index], value[index] });
+          return std::pair{ list[index], value[index] };
 }
 
 template <typename T, typename V, uint m>
-uint Node<T, V, m>::find_key(const T& elem) const {
+uint Node<T, V, m>::find_key(const T& elem) const noexcept {
           for (int i = 0; i < crt_size; ++i) {
                     if (list[i] == elem) return i;
           }
@@ -180,7 +180,3 @@ const typename Node<T, V, m>::Deliver Node<T, V, m>::merge() {
           exit(1);
 }
 
-template <typename T, typename V, uint m>
-void Node<T, V, m>::_force_del(const uint32_t index) {
-
-}
