@@ -1,6 +1,9 @@
 #include "bp.h"
 #include "../locker.h"
 
+#include <unordered_map>
+#include <stack>
+
 /**
  * 拷贝构造函数的实现，赋值构造函数被deleted
  */
@@ -33,7 +36,10 @@ Node<T, V, m>::~Node() {
 
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcept {
-          if (std::find(list.begin(), list.end(), elem) != list.end()) return nullptr;
+          if (std::find(list.begin(), list.end(), elem) != list.end()) {
+                    printf("Key has inserted into B+ tree.\n");
+                    return nullptr;
+          }
           if (size() == m) {  // 因为当前节点已经满了，所以需要首先分割节点，触发split操作
                     auto ret = split();                                         // split会将当前节点分成两份，返回一个bpNode代表分离后的右半部分
                     if (ret == nullptr) crash("Split get an empty node.");      // 分割后没有得到另一半节点，触发错误
@@ -50,7 +56,9 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcep
                                         if (pos != -1) parent->change_key(pos, get_key(), 0);
                               }
                     }
-                    else ret->insert(elem, val);
+                    else {
+                              ret->insert(elem, val);
+                    }
                     return parent != nullptr ? parent->insert(ret->get_key(), ret) : ret;
           }
           // size < m 有剩余空间
@@ -65,7 +73,6 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcep
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>& node) noexcept {
           node->_is_root = false; node->parent = this;
-
           if (size() == m) {  // 因为当前节点已经满了，所以需要首先分割节点，触发split操作
                     auto ret = split();                                         // split会将当前节点分成两份，返回一个bpNode代表分离后的右半部分
                     if (ret == nullptr) crash("Split get an empty node.");      // 分割后没有得到另一半节点，触发错误
@@ -89,6 +96,14 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
           while (position < size() && list[position] < elem) position++;
           list.insert(list.begin() + position, elem);
           next.insert(next.begin() + position, node);
+          if (position > 0) {
+                    next[position - 1]->next_leaf = node.get();
+                    node->before_leaf = next[position - 1].get();
+          }
+          if (position + 1 < size()) {
+                    next[position + 1]->before_leaf = node.get();
+                    node->next_leaf = next[position + 1].get();
+          }
           // 当改变的是最后一个元素，需要修改上层的Key为新Key
           if (position == size() - 1 && parent != nullptr) parent->change_key(list[size() - 2], list[size() - 1]);
           return nullptr;
@@ -112,21 +127,17 @@ void Node<T, V, m>::erase(const uint index) noexcept {
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::split() noexcept {                         // 分割后需要修改父节点中的Key
           auto node = Node::create_node(_type);   // 相同类型的节点
-
           int pos = -1;
           if (parent != nullptr) pos = parent->find_key(get_key());
           // list移动到新节点
           moveV2V(list, node->list, limit);
           if (_type == NodeType::LeafNode) moveV2V(value, node->value, limit);
           else moveV2V(next, node->next, limit);
-
-          node->next_leaf = next_leaf;
+          /*node->next_leaf = next_leaf;
           if (next_leaf != nullptr) next_leaf->before_leaf = node.get();
           next_leaf = node.get();
-          node->before_leaf = this;
-
+          node->before_leaf = this;*/
           if (pos != -1) parent->change_key(pos, get_key(), 0);
-
           return node;
 }
 template <typename T, typename V, uint m>
@@ -181,6 +192,17 @@ void Node<T, V, m>::change_key(const int pos, const T& new_key, int) noexcept {
           if (pos + 1 < size() - 1) assert(list[pos + 1] > new_key);                // Debug
           if (pos == size() - 1 && parent != nullptr) parent->change_key(list[pos], new_key);
           list[pos] = new_key;
+}
+
+template <typename T, typename V, uint m>
+void Node<T, V, m>::check() {
+          if (_type == NodeType::LeafNode) assert(list.size() == value.size());
+          else assert(list.size() == next.size());
+
+          for (int i = 1; i < size(); ++i) assert(list[i] > list[i - 1]);
+
+          if (_type == NodeType::InnerNode)
+          for (auto each : next) each->check();
 }
 
 /**
@@ -240,4 +262,33 @@ bool BPTree<T, V, m>::tombstone(const T& key) {
 template <typename T, typename V, uint m>
 bool BPTree<T, V, m>::exist(const T& key) {
           return false;
+}
+
+/**
+ * B+ 树逻辑检查函数
+ */
+
+template <typename T, typename V, uint m>
+void BPTree<T, V, m>::check_serialize(std::vector<V>& arr) { check_serialize_(arr, root); }
+template <typename T, typename V, uint m>
+void BPTree<T, V, m>::check_serialize_(std::vector<V>& arr, const bpNode<T, V, m>& node) {
+          if (node->_type == NodeType::LeafNode) {
+                    for (auto val : node->value) arr.push_back(val);
+                    return;
+          }
+          for (auto& each : node->next) check_serialize_(arr, each);
+}
+
+template <typename T, typename V, uint m>
+void BPTree<T, V, m>::check() { 
+          root->check(); 
+          
+          std::vector<V> arr;
+          check_serialize(arr);
+          std::unordered_map<V, size_t> ref;
+          for (auto each : arr) ref[each] += 1;
+          for (auto &&[k, v] : ref) if (v > 1) {
+                    std::cout << "Error: 出现次数大于一次 => " << k << "\n";
+                    exit(1);
+          }
 }

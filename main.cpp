@@ -138,7 +138,7 @@ void bp_test() {
 
 void bp_test2() {
           BPTree<std::string, double, 10> bp1;
-          int pos = 150;
+          int pos = 174;                // TODO：插入174时出现错误
           bp1.insert(std::to_string(1), 1);
 
           for (int i = 0; i < pos; ++i) {
@@ -146,8 +146,11 @@ void bp_test2() {
                     bp1.insert(std::to_string(i), i);
                     auto arr = bp1.serialize();
                     display(arr);
+
+                    bp1.check();
           }
           bp1.insert(std::to_string(pos), pos);
+          bp1.check();
 }
 
 void bp_test3() {
@@ -168,6 +171,6 @@ int main() {
           // node_test();
           // node_test2();
           // bp_test();
-          // bp_test2();
-          bp_test3();
+          bp_test2();
+          // bp_test3();
 }

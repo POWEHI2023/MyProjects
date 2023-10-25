@@ -201,6 +201,8 @@ public:
                     ret->insert(_args...);
                     return std::move(ret);
           }
+
+          void check();
 };
 
 template <typename T>
@@ -270,6 +272,11 @@ public:
           bool exist(const T& key);
 
           std::vector<V> serialize() const;
+
+          void check();
+          void check_serialize(std::vector<V>& arr);
+
+          void check_serialize_(std::vector<V>& arr, const bpNode<T, V, m>& node);
 private:
           bpNode<T, V, m> root;
 public:
