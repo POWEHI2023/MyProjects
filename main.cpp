@@ -28,21 +28,33 @@ void node_test() {
           displayNode4i5(*i);
 }
 
+void bp_test1() {
+          BPTree<std::string, double, 3> bp;
+          int pos = 200;
+          for (int i = 0; i < pos; ++i) {
+                    printf("Insert %d\n", i);
+                    bp.insert(std::to_string(i), i);
+                    display(bp.serialize());
+                    bp.check();
+          }
+          bp.insert(std::to_string(pos), pos);
+}
+
 void bp_test2() {
           BPTree<std::string, double, 10> bp1;
-          int pos = 174;                // TODO：插入174时出现错误
+          int pos = 10000;
           bp1.insert(std::to_string(1), 1);
 
           for (int i = 0; i < pos; ++i) {
                     printf("%d\n", i);
                     bp1.insert(std::to_string(i), i);
-                    auto arr = bp1.serialize();
-                    display(arr);
+                    // auto arr = bp1.serialize();
+                    // display(arr);
 
-                    bp1.check();
+                    // bp1.check();
           }
           bp1.insert(std::to_string(pos), pos);
-          bp1.check();
+          // bp1.check();
 }
 
 void bp_test3() {
@@ -62,7 +74,7 @@ int main() {
           // element_test();
           // node_test();
           // node_test2();
-          // bp_test();
+          // bp_test1();
           bp_test2();
           // bp_test3();
 }

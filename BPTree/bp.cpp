@@ -49,10 +49,14 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcep
                                         int pos = -1;                 // 由于移动了部分节点填充ret，可能导致Key改变
                                         if (parent != nullptr) pos = parent->find_key(get_key());
                                         
-                                        ret->list.push_back(list.back()); list.pop_back();
+                                        ret->list.insert(ret->list.begin(), list.back()); list.pop_back();
                                         if (_type == NodeType::LeafNode) {
-                                                  ret->value.push_back(value.back()); value.pop_back();
-                                        } else { ret->next.push_back(next.back()); next.pop_back(); }
+                                                  ret->value.insert(ret->value.begin(), value.back()); value.pop_back();
+                                        } else { 
+                                                  next.back()->parent = ret.get();
+                                                  ret->next.insert(ret->next.begin(), next.back()); 
+                                                  next.pop_back(); 
+                                        }
                                         if (pos != -1) parent->change_key(pos, get_key(), 0);
                               }
                     }
@@ -81,10 +85,14 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
                               if (ret->size() < limit) {
                                         int pos = -1;                 // 由于移动了部分节点填充ret，可能导致Key改变
                                         if (parent != nullptr) pos = parent->find_key(get_key());
-                                        ret->list.push_back(list.back()); list.pop_back();
+                                        ret->list.insert(ret->list.begin(), list.back()); list.pop_back();
                                         if (_type == NodeType::LeafNode) {
-                                                  ret->value.push_back(value.back()); value.pop_back();
-                                        } else { ret->next.push_back(next.back()); next.pop_back(); }
+                                                  ret->value.insert(ret->value.begin(), value.back()); value.pop_back();
+                                        } else { 
+                                                  next.back()->parent = ret.get();
+                                                  ret->next.insert(ret->next.begin(), next.back()); 
+                                                  next.pop_back(); 
+                                        }
                                         if (pos != -1) parent->change_key(pos, get_key(), 0);
                               }
                     }
@@ -96,14 +104,21 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
           while (position < size() && list[position] < elem) position++;
           list.insert(list.begin() + position, elem);
           next.insert(next.begin() + position, node);
-          if (position > 0) {
-                    next[position - 1]->next_leaf = node.get();
-                    node->before_leaf = next[position - 1].get();
-          }
-          if (position + 1 < size()) {
-                    next[position + 1]->before_leaf = node.get();
-                    node->next_leaf = next[position + 1].get();
-          }
+          if (position > 0) {                               // Before <-> Next & Node
+                    Node* before_ = next[position - 1].get();
+
+                    node->before_leaf = before_;
+                    node->next_leaf = before_->next_leaf;
+                    if (node->next_leaf != nullptr) node->next_leaf->before_leaf = node.get();
+                    before_->next_leaf = node.get();
+          } else if (position + 1 < size()) {
+                    Node* next_ = next[position + 1].get();
+
+                    node->next_leaf = next_;
+                    node->before_leaf = next_->before_leaf;
+                    if (node->before_leaf != nullptr) node->before_leaf->next_leaf = node.get();
+                    next_->before_leaf = node.get();
+          } 
           // 当改变的是最后一个元素，需要修改上层的Key为新Key
           if (position == size() - 1 && parent != nullptr) parent->change_key(list[size() - 2], list[size() - 1]);
           return nullptr;
@@ -132,11 +147,15 @@ const bpNode<T, V, m> Node<T, V, m>::split() noexcept {                         
           // list移动到新节点
           moveV2V(list, node->list, limit);
           if (_type == NodeType::LeafNode) moveV2V(value, node->value, limit);
-          else moveV2V(next, node->next, limit);
-          /*node->next_leaf = next_leaf;
-          if (next_leaf != nullptr) next_leaf->before_leaf = node.get();
-          next_leaf = node.get();
-          node->before_leaf = this;*/
+          else {
+                    for (
+                              typename std::vector<bpNode<T, V, m>>::iterator iter = next.begin() + limit;
+                              iter != next.end();
+                              iter++
+                    ) { (*iter)->parent = node.get(); node->next.push_back(*iter); }
+                    for (int i = limit, len = next.size(); i < len; ++i) next.pop_back();
+          }
+
           if (pos != -1) parent->change_key(pos, get_key(), 0);
           return node;
 }
@@ -199,10 +218,16 @@ void Node<T, V, m>::check() {
           if (_type == NodeType::LeafNode) assert(list.size() == value.size());
           else assert(list.size() == next.size());
 
-          for (int i = 1; i < size(); ++i) assert(list[i] > list[i - 1]);
+          for (int i = 1; i < size(); ++i) {
+                    std::cout << "assert: " << list[i] << " > " << list[i - 1] << "\n";
+                    assert(list[i] > list[i - 1]);
+          }
 
           if (_type == NodeType::InnerNode)
-          for (auto each : next) each->check();
+          for (auto each : next) {
+                    assert(each->parent == this);
+                    each->check();
+          }
 }
 
 /**
@@ -276,7 +301,10 @@ void BPTree<T, V, m>::check_serialize_(std::vector<V>& arr, const bpNode<T, V, m
                     for (auto val : node->value) arr.push_back(val);
                     return;
           }
-          for (auto& each : node->next) check_serialize_(arr, each);
+          for (int i = 0; i < node->list.size(); ++i) {
+                    check_serialize_(arr, node->next[i]);
+                    assert(node->next[i]->get_key() == node->list[i]);
+          }
 }
 
 template <typename T, typename V, uint m>

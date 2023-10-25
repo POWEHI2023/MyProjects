@@ -212,7 +212,6 @@ inline void moveV2V(std::vector<T>& v1, std::vector<T>& v2, size_t start) noexce
                     iter != v1.end();
                     iter++
           ) v2.push_back(*iter);
-
           for (int i = start, len = v1.size(); i < len; ++i) v1.pop_back();
 }
 
