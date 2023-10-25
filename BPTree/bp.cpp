@@ -48,21 +48,12 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcep
                               if (ret->size() < limit) {
                                         int pos = -1;                 // 由于移动了部分节点填充ret，可能导致Key改变
                                         if (parent != nullptr) pos = parent->find_key(get_key());
-                                        
                                         ret->list.insert(ret->list.begin(), list.back()); list.pop_back();
-                                        if (_type == NodeType::LeafNode) {
-                                                  ret->value.insert(ret->value.begin(), value.back()); value.pop_back();
-                                        } else { 
-                                                  next.back()->parent = ret.get();
-                                                  ret->next.insert(ret->next.begin(), next.back()); 
-                                                  next.pop_back(); 
-                                        }
+                                        ret->value.insert(ret->value.begin(), value.back()); value.pop_back();
                                         if (pos != -1) parent->change_key(pos, get_key(), 0);
                               }
                     }
-                    else {
-                              ret->insert(elem, val);
-                    }
+                    else ret->insert(elem, val);
                     return parent != nullptr ? parent->insert(ret->get_key(), ret) : ret;
           }
           // size < m 有剩余空间
@@ -86,13 +77,9 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
                                         int pos = -1;                 // 由于移动了部分节点填充ret，可能导致Key改变
                                         if (parent != nullptr) pos = parent->find_key(get_key());
                                         ret->list.insert(ret->list.begin(), list.back()); list.pop_back();
-                                        if (_type == NodeType::LeafNode) {
-                                                  ret->value.insert(ret->value.begin(), value.back()); value.pop_back();
-                                        } else { 
-                                                  next.back()->parent = ret.get();
-                                                  ret->next.insert(ret->next.begin(), next.back()); 
-                                                  next.pop_back(); 
-                                        }
+                                        next.back()->parent = ret.get();
+                                        ret->next.insert(ret->next.begin(), next.back()); 
+                                        next.pop_back(); 
                                         if (pos != -1) parent->change_key(pos, get_key(), 0);
                               }
                     }
@@ -106,14 +93,12 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
           next.insert(next.begin() + position, node);
           if (position > 0) {                               // Before <-> Next & Node
                     Node* before_ = next[position - 1].get();
-
                     node->before_leaf = before_;
                     node->next_leaf = before_->next_leaf;
                     if (node->next_leaf != nullptr) node->next_leaf->before_leaf = node.get();
                     before_->next_leaf = node.get();
           } else if (position + 1 < size()) {
                     Node* next_ = next[position + 1].get();
-
                     node->next_leaf = next_;
                     node->before_leaf = next_->before_leaf;
                     if (node->before_leaf != nullptr) node->before_leaf->next_leaf = node.get();
@@ -310,9 +295,7 @@ void BPTree<T, V, m>::check_serialize_(std::vector<V>& arr, const bpNode<T, V, m
 template <typename T, typename V, uint m>
 void BPTree<T, V, m>::check() { 
           root->check(); 
-          
-          std::vector<V> arr;
-          check_serialize(arr);
+          std::vector<V> arr; check_serialize(arr);
           std::unordered_map<V, size_t> ref;
           for (auto each : arr) ref[each] += 1;
           for (auto &&[k, v] : ref) if (v > 1) {
