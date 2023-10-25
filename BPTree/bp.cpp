@@ -33,6 +33,7 @@ Node<T, V, m>::~Node() {
 
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcept {
+          if (std::find(list.begin(), list.end(), elem) != list.end()) return nullptr;
           if (size() == m) {  // 因为当前节点已经满了，所以需要首先分割节点，触发split操作
                     auto ret = split();                                         // split会将当前节点分成两份，返回一个bpNode代表分离后的右半部分
                     if (ret == nullptr) crash("Split get an empty node.");      // 分割后没有得到另一半节点，触发错误
@@ -108,7 +109,6 @@ void Node<T, V, m>::erase(const uint index) noexcept {
           else next.erase(next.begin() + index);
           if (size() < limit && !_is_root) merge();
 }
-
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::split() noexcept {                         // 分割后需要修改父节点中的Key
           auto node = Node::create_node(_type);   // 相同类型的节点
@@ -129,7 +129,6 @@ const bpNode<T, V, m> Node<T, V, m>::split() noexcept {                         
 
           return node;
 }
-
 template <typename T, typename V, uint m>
 void Node<T, V, m>::merge() noexcept {            // merge期间会对涉及到的节点上锁，不会触发死锁是因为Merge应该找到可以合并的节点，不会触发split
           if (before_leaf != nullptr && before_leaf->size() > limit) {          // 取左节点的一个值补充至limit
@@ -175,7 +174,6 @@ void Node<T, V, m>::change_key(const T& old_key, const T& new_key) noexcept {
           if (position == size() - 1 && parent != nullptr) parent->change_key(old_key, new_key);
           list[position] = new_key;
 }
-
 template <typename T, typename V, uint m>
 void Node<T, V, m>::change_key(const int pos, const T& new_key, int) noexcept {
           if (pos < 0 || pos >= size()) crash("Key position out of bound.");
@@ -185,22 +183,16 @@ void Node<T, V, m>::change_key(const int pos, const T& new_key, int) noexcept {
           list[pos] = new_key;
 }
 
-
 /**
  * B+ Tree Entity
  */
 
 template <typename T, typename V, uint m>
-BPTree<T, V, m>::BPTree(): root(Node<T, V, m>::create_node(NodeType::LeafNode))
-{ root->_is_root = true; }
-
+BPTree<T, V, m>::BPTree(): root(Node<T, V, m>::create_node(NodeType::LeafNode)) { root->_is_root = true; }
 template <typename T, typename V, uint m>
 BPTree<T, V, m>::~BPTree() { }
-
 template <typename T, typename V, uint m>
-bool BPTree<T, V, m>::is_empty() const noexcept 
-{ return root == nullptr || root->size() == 0; }
-
+bool BPTree<T, V, m>::is_empty() const noexcept { return root == nullptr || root->size() == 0; }
 template <typename T, typename V, uint m>
 std::vector<V> BPTree<T, V, m>::serialize() const {
           auto cpy = root.get();
@@ -217,28 +209,20 @@ std::vector<V> BPTree<T, V, m>::serialize() const {
 
 template <typename T, typename V, uint m>
 void BPTree<T, V, m>::insert(const T& key, const V& val) {
-          bpNode<T, V, m> ret = nullptr;
-          {
-                    Node<T, V, m>* cpy = root.get();
-                    while (cpy->_type != NodeType::LeafNode) {
-                              uint pos = 0;
-                              while (pos < cpy->size() && cpy->list[pos] < key) {
-                                        pos++;
-                              }
-                              cpy = cpy->next[pos < cpy->size() ? pos : pos - 1].get();
+          Node<T, V, m>* cpy = root.get();
+          while (cpy->_type != NodeType::LeafNode) {
+                    uint pos = 0;
+                    while (pos < cpy->size() && cpy->list[pos] < key) {
+                              pos++;
                     }
-
-                    // cpy is a LeafNode
-                    ret = cpy->insert(key, val);
+                    cpy = cpy->next[pos < cpy->size() ? pos : pos - 1].get();
           }
-
+          bpNode<T, V, m> ret = cpy->insert(key, val);
           if (ret != nullptr) {
                     bpNode<T, V, m> new_root = Node<T, V, m>::create_node(NodeType::InnerNode);
                     new_root->_is_root = true;
                     new_root->insert(root->get_key(), root);
-
                     new_root->insert(ret->get_key(), ret);
-
                     root = std::move(new_root);
           }
 }

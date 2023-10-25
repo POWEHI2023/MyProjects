@@ -139,6 +139,7 @@ void bp_test() {
 void bp_test2() {
           BPTree<std::string, double, 10> bp1;
           int pos = 150;
+          bp1.insert(std::to_string(1), 1);
 
           for (int i = 0; i < pos; ++i) {
                     printf("%d\n", i);
@@ -159,8 +160,6 @@ void bp_test3() {
                     auto arr = bp1.serialize();
                     display(arr);
           }
-
-          
 }
 
 int main() {

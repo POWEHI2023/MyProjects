@@ -215,20 +215,24 @@ inline void moveV2V(std::vector<T>& v1, std::vector<T>& v2, size_t start) noexce
 }
 
 template <typename T, typename V, uint m>
-inline bool operator==(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator==(y); }
+inline bool operator==(const Node<T, V, m>& x, const Node<T, V, m>& y) noexcept { return x.operator==(y); }
 template <typename T, typename V, uint m>
-inline bool operator!=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator!=(y); }
+inline bool operator!=(const Node<T, V, m>& x, const Node<T, V, m>& y) noexcept { return x.operator!=(y); }
 template <typename T, typename V, uint m>
-inline bool operator>(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>(y); }
+inline bool operator>(const Node<T, V, m>& x, const Node<T, V, m>& y) noexcept { return x.operator>(y); }
 template <typename T, typename V, uint m>
-inline bool operator>=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator>=(y); }
+inline bool operator>=(const Node<T, V, m>& x, const Node<T, V, m>& y) noexcept { return x.operator>=(y); }
 template <typename T, typename V, uint m>
-inline bool operator<(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<(y); }
+inline bool operator<(const Node<T, V, m>& x, const Node<T, V, m>& y) noexcept { return x.operator<(y); }
 template <typename T, typename V, uint m>
-inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<=(y); }
+inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) noexcept { return x.operator<=(y); }
 
 /**
  * B+ Tree Entity
+ * B+树模版参数
+ *        T为键值类型，需要能够比较大小，拥有operator>和operator<
+ *        V为值类型，叶子节点存储的类型
+ *        m为B+树莓个节点的最大容纳数量，非root节点的容量为[(m + 1) / 2, m]
  */
 
 template <typename T, typename V, uint m>
