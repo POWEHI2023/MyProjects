@@ -1,6 +1,4 @@
-#include "BSTTree/bst.cpp"
 #include "BPTree/bp.cpp"
-#include "BPTree/element.h"
 
 #include <gtest/gtest.h>
 
@@ -10,160 +8,23 @@ void display(const std::vector<T>& arr) {
           std::cout << std::endl;
 }
 
-template <typename T>
-void arr4display(const BSTTree<T>& tree) {
-          std::vector<T> arr = tree.to_array();
-          display(arr);
-}
-
-void tree_test() {
-          /**
-           *       6
-           *     /   \
-           *    3     8
-           *   / \
-           *  1   4
-           * 
-           * 
-           *       \
-           *        5
-           */
-
-          {
-                    BSTTree<int> bst1;
-                    bst1.insert(6);
-                    bst1.insert(3);
-                    bst1.insert(8);
-                    bst1.insert(1);
-                    bst1.insert(4);
-
-                    std::vector<int> arr1 = bst1.to_array();
-                    display(arr1);
-
-                    arr1 = bst1.serilize();
-                    display(arr1);
-
-                    bst1.insert(5);
-                    arr1 = bst1.to_array();
-                    display(arr1);
-
-                    arr1 = bst1.serilize();
-                    display(arr1);
-          }
-
-          {
-                    BSTTree<int> bst1;
-                    bst1.insert(6);
-                    bst1.insert(3);
-                    bst1.insert(8);
-                    bst1.insert(1);
-                    bst1.insert(4);
-
-                    BSTTree<int>::iterator iter = bst1.begin();
-                    for (; iter != bst1.end(); ++iter) {
-                              printf("%d ", iter->element);
-                    }
-                    printf("\n");
-
-                    bst1.insert(4);
-                    iter = bst1.begin();
-                    for (; iter != bst1.end(); ++iter) {
-                              printf("%d ", iter->element);
-                    }
-                    printf("\n");
-          }
-
-          {
-                    BSTTree<int> bst{6,3,8,1,4};
-          
-                    std::vector<int> arr = bst.to_array();
-                    display(arr);
-
-                    bst.customize([](int x, int y){ return x < y; });
-                    arr = bst.to_array();
-                    display(arr);
-          }
-
-          {
-                    BSTTree<int> bst{6, 3, 8, 1, 4, 5};
-                    arr4display(bst);
-
-                    bst.insert(10);
-                    arr4display(bst);
-
-                    bst.erase(bst.find(3));
-                    arr4display(bst);
-
-                    bst.erase(bst.begin());
-                    arr4display(bst);
-
-                    BSTTree<int>::iterator iter = bst.begin();
-                    iter += 4;
-                    bst.erase(iter);
-                    arr4display(bst);
-
-                    bst.erase(bst.begin() + 1 + 2);
-                    arr4display(bst);
-          }
-
-          {
-                    std::shared_ptr<BSTTree<int>> p(new BSTTree<int>, [](BSTTree<int>* x) {
-                              printf("Delete BSTTree\n");
-                              delete x;
-                    });  
-          }
-          printf("After\n");
-}
-
-void element_test() {
-          auto displayElement4ii = [](const Element<int, int>& x) {
-                    auto [k, v] = x.get_content();
-                    printf("Element{Key: %d : Value: %d}\n", k, v);
-          };
-          auto x = Element<int, int>(1, 0, true);
-          displayElement4ii(x);
-
-          x.set_key(2);
-          x.set_value(1);
-          displayElement4ii(x);
-}
-
 void node_test() {
           auto displayNode4i5 = [](const Node<int, int>& node) {
                     printf("Node size: %ld, Type: %s\n", node.size(),
                               node._type == NodeType::LeafNode ? "Leaf node" : "Inner node");
+
                     for (int i = 0; i < node.size(); ++i) {
                               auto [k, v, t] = node[i];
                               if (t) printf("``Key: %d : Value: %d\n", k, v._v);
+                              else {
+                                        printf("``Key: %d, Node Size: %ld\n", k, v._n->size());
+                              }
                     }
                     
           };
 
-          Node<int, int> x;
-          x.insert(0, 0);
-          displayNode4i5(x);
-
-          Node<int, int> y;
-          y.insert(-1, -1);
-          displayNode4i5(y);
-          y.insert(1, 1);
-
-          auto z(y);
-          z.insert(2, 2);
-          displayNode4i5(z);
-          
-          Node<int, int> m(x);
-          displayNode4i5(m);
-
-          auto i = Node<int, int>::create_node(NodeType::LeafNode, -2, -2, -1, -1, 0, 0);
-          i->_is_root = true;
-
-          displayNode4i5(*i);
-          i->erase(1);
-          displayNode4i5(*i);
-          i->erase(1);
-          displayNode4i5(*i);
-          i->erase(0);
+          auto i = Node<int, int>::create_node();
+          i->insert(1, 1);
           displayNode4i5(*i);
 }
 
@@ -188,7 +49,8 @@ void node_test2 () {
           displayNode4i5(*i);
 
           auto ret = i->insert(3, 3);
-          displayNode4i5(*i); printf("\n");
+          displayNode4i5(*i);
+
           displayNode4i5(*ret);
 
           auto root = Node<int, int>::create_node(NodeType::InnerNode);
@@ -199,7 +61,7 @@ void node_test2 () {
           printf("\n");
           displayNode4i5(*root);
 
-          ret->erase(2);
+          ret->erase(1);
           displayNode4i5(*root);
           if (root->size() == 1 && root->_type == NodeType::InnerNode) {
                     auto [k, v, t] = (*root)[0];
@@ -267,30 +129,46 @@ void bp_test() {
           arr = bp.serialize();
           display(arr);
 
-          /*for (int i = 15; i < 100; ++i) {
+          for (int i = 15; i < 100; ++i) {
                     bp.insert(i,i);
                     arr = bp.serialize();
                     display(arr);
-          }*/
+          }
 }
 
 void bp_test2() {
           BPTree<std::string, double, 10> bp1;
-          for (int i = 0; i < 90; ++i) {
+          int pos = 150;
+
+          for (int i = 0; i < pos; ++i) {
                     printf("%d\n", i);
                     bp1.insert(std::to_string(i), i);
                     auto arr = bp1.serialize();
                     display(arr);
           }
-          bp1.insert(std::to_string(90), 90);
+          bp1.insert(std::to_string(pos), pos);
+}
+
+void bp_test3() {
+          BPTree<std::string, double, 10> bp1;
+          int pos = 10;
+
+          for (int i = 0; i < pos; ++i) {
+                    printf("%d\n", i);
+                    bp1.insert(std::to_string(i), i);
+                    auto arr = bp1.serialize();
+                    display(arr);
+          }
+
+          
 }
 
 int main() {
           //tree_test();
           // element_test();
-          node_test();
+          // node_test();
           // node_test2();
           // bp_test();
           // bp_test2();
-          // std::cout << (std::string("90") < std::string("59")) << "\n";
+          bp_test3();
 }

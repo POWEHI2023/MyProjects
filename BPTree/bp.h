@@ -22,6 +22,9 @@ void crash (const std::string& msg) {
           exit(1);
 }
 
+template <typename T>
+inline void moveV2V(std::vector<T>& v1, std::vector<T>& v2, size_t start) noexcept;
+
 template <typename T, typename V, uint m>
 class Node {
 public:
@@ -95,8 +98,9 @@ public:
                     return insert(_args...);
           }
           template <typename... _Args>
-          const bpNode<T, V, m> insert(_Args&&... _args) noexcept { return insert(_args...); }
-          const bpNode<T, V, m> insert(const RET& ret) noexcept;
+          // const bpNode<T, V, m> insert(_Args&&... _args) noexcept { return insert(_args...); }
+          
+          const bpNode<T, V, m> insert(const RET& ret) noexcept { return ret._leaf ? insert(ret.x, ret.y._v) : insert(ret.x, ret.y._n); }
           void erase(const uint32_t index) noexcept;
 
           /**
@@ -120,7 +124,7 @@ private:
           uint32_t limit = (m + 1) / 2;           // limit为一个非root节点存储的最少内容
                                         // 当内容少于limit时需要合并节点，当内容多出 m 时需要分割节点
 
-          std::shared_mutex mtx;                         // 读写锁，当节点在修改时无法操作当前节点以及父节点
+          // std::shared_mutex mtx;                         // 读写锁，当节点在修改时无法操作当前节点以及父节点
 
           /**
            * 内部使用的功能性函数
@@ -164,7 +168,7 @@ private:
           template <typename ValueType>
           const bpNode<T, V, m> insert_(const T& key, ValueType&& value, bool type) noexcept;
           void change_key(const T& old_key, const T& new_key) noexcept;
-          void change_key(const uint pos, const T& new_key) noexcept;
+          void change_key(const int pos, const T& new_key, int) noexcept;
 public:
           friend class BPTree<T, V, m>;
 
@@ -199,6 +203,17 @@ public:
           }
 };
 
+template <typename T>
+inline void moveV2V(std::vector<T>& v1, std::vector<T>& v2, size_t start) noexcept {
+          for (
+                    typename std::vector<T>::iterator iter = v1.begin() + start;
+                    iter != v1.end();
+                    iter++
+          ) v2.push_back(*iter);
+
+          for (int i = start, len = v1.size(); i < len; ++i) v1.pop_back();
+}
+
 template <typename T, typename V, uint m>
 inline bool operator==(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator==(y); }
 template <typename T, typename V, uint m>
@@ -211,16 +226,6 @@ template <typename T, typename V, uint m>
 inline bool operator<(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<(y); }
 template <typename T, typename V, uint m>
 inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<=(y); }
-
-template <typename T>
-inline void moveV2V(std::vector<T>& v1, std::vector<T>& v2, size_t start) noexcept {
-          for (
-                    typename std::vector<T>::iterator iter = v1.begin() + start;
-                    iter != v1.end();
-                    iter++
-          ) v2.push_back(std::move(*iter));
-          for (int i = start; i < v1.size(); ++i) v1.pop_back();
-}
 
 /**
  * B+ Tree Entity
