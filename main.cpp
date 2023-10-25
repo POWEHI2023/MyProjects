@@ -1,5 +1,6 @@
 #include "BSTTree/bst.cpp"
 #include "BPTree/bp.cpp"
+#include "BPTree/element.h"
 
 #include <gtest/gtest.h>
 
@@ -209,7 +210,7 @@ void node_test2 () {
 }
 
 void bp_test() {
-          BPTree<int, int, 5> bp;
+          BPTree<int, double, 5> bp;
           bp.insert(1,1);
           bp.insert(2,2);
           bp.insert(3,3);
@@ -226,10 +227,10 @@ void bp_test() {
           arr = bp.serialize();
           display(arr);
 
-          bp.insert(8,8);
+          bp.insert(8,8.0);
           arr = bp.serialize();
           display(arr);
-          bp.insert(9,9);
+          bp.insert(9,9.1);
           arr = bp.serialize();
           display(arr);
           bp.insert(10,10);
@@ -273,10 +274,23 @@ void bp_test() {
           }*/
 }
 
+void bp_test2() {
+          BPTree<std::string, double, 10> bp1;
+          for (int i = 0; i < 90; ++i) {
+                    printf("%d\n", i);
+                    bp1.insert(std::to_string(i), i);
+                    auto arr = bp1.serialize();
+                    display(arr);
+          }
+          bp1.insert(std::to_string(90), 90);
+}
+
 int main() {
           //tree_test();
           // element_test();
-          // node_test();
+          node_test();
           // node_test2();
-          bp_test();
+          // bp_test();
+          // bp_test2();
+          // std::cout << (std::string("90") < std::string("59")) << "\n";
 }

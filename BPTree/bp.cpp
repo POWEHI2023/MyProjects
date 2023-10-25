@@ -1,38 +1,8 @@
 #include "bp.h"
+#include "../locker.h"
 
 /**
- * For Element
- */
-
-template <typename KeyType, typename ValueType>
-Element<KeyType, ValueType>::Element(KeyType&& key, ValueType&& value, bool is_leaf):
-key(key), value(value), is_leaf(is_leaf) { }
-template <typename KeyType, typename ValueType>
-Element<KeyType, ValueType>::Element(const Element* e):
-key(e->key), value(e->value), is_leaf(e->is_leaf), tombstone(e->tombstone) { }
-template <typename KeyType, typename ValueType>
-Element<KeyType, ValueType>::Element(const Element& e):
-key(e.key), value(e.value), is_leaf(e.is_leaf), tombstone(e.tombstone) { }
-template <typename KeyType, typename ValueType>
-Element<KeyType, ValueType>::Element(const Element&& e):
-key(std::move(e.key)), value(std::move(e.value)), is_leaf(std::move(e.is_leaf)), tombstone(std::move(e.tombstone)) { }
-template <typename KeyType, typename ValueType>
-void Element<KeyType, ValueType>::operator=(const Element& elem) {
-          this->key = elem.key;
-          this->value = elem.value;
-          this->is_leaf = elem.is_leaf;
-          this->tombstone = elem.tombstone;
-}
-template <typename KeyType, typename ValueType>
-void Element<KeyType, ValueType>::operator=(const Element&& elem) {
-          this->key = std::move(elem.key);
-          this->value = std::move(elem.value);
-          this->is_leaf = std::move(elem.is_leaf);
-          this->tombstone = std::move(elem.tombstone);
-}
-
-/**
- * Node Constructors
+ * 拷贝构造函数的实现，赋值构造函数被deleted
  */
 
 template <typename T, typename V, uint m>
@@ -56,59 +26,94 @@ Node<T, V, m>::~Node() {
 }
 
 /**
- * Basic functions part
+ * 基本功能的实现
+ *        insert / erase
+ *        split / merge
  */
 
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcept {
-
+          if (size() == m) {  // 因为当前节点已经满了，所以需要首先分割节点，触发split操作
+                    auto ret = split();                                         // split会将当前节点分成两份，返回一个bpNode代表分离后的右半部分
+                    if (ret == nullptr) crash("Split get an empty node.");      // 分割后没有得到另一半节点，触发错误
+                    ret->insert(elem, val);
+                    return parent != nullptr ? parent->insert(ret->get_key(), ret) : nullptr;
+          }
+          // size < m 有剩余空间
+          uint position = 0;
+          while (position < size() && list[position] < elem) position++;
+          list.insert(list.begin() + position, elem);
+          value.insert(value.begin() + position, val);
+          // 当改变的是最后一个元素，需要修改上层的Key为新Key
+          if (position == size() - 1 && parent != nullptr) parent->change_key(list[size() - 2], list[size() - 1]);
           return nullptr;
 }
-
 template <typename T, typename V, uint m>
 const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>& node) noexcept {
+          if (size() == m) {  // 因为当前节点已经满了，所以需要首先分割节点，触发split操作
+                    auto ret = split();                                         // split会将当前节点分成两份，返回一个bpNode代表分离后的右半部分
+                    if (ret == nullptr) crash("Split get an empty node.");      // 分割后没有得到另一半节点，触发错误
+                    ret->insert(elem, node);
+                    return parent != nullptr ? parent->insert(ret->get_key(), ret) : nullptr;
+          }
+          // size < m 有剩余空间
+          uint position = 0;
+          while (position < size() && list[position] < elem) position++;
+          list.insert(list.begin() + position, elem);
+          next.insert(next.begin() + position, node);
+          // 当改变的是最后一个元素，需要修改上层的Key为新Key
+          if (position == size() - 1 && parent != nullptr) parent->change_key(list[size() - 2], list[size() - 1]);
           return nullptr;
 }
-
+template <typename T, typename V, uint m>
+const bpNode<T, V, m> Node<T, V, m>::insert(const bpNode<T, V, m>& node) noexcept { return insert(node->get_key(), node); }
+template <typename T, typename V, uint m>
+const bpNode<T, V, m> Node<T, V, m>::insert(const RET& ret) noexcept { return ret._leaf ? insert(ret.x, ret.y._v) : insert(ret.x, ret.y._n); }
 template <typename T, typename V, uint m>
 void Node<T, V, m>::erase(const uint index) noexcept {
           if (index < 0 || index >= size()) {
                     printf("Erase Error: Index(%d) out of bount(0 - %ld).\n", index, size() - 1);
                     exit(1);
           }
-          if (size() > 0) {
-                    if (index == size() - 1 && parent != nullptr) 
-                    parent->change_key(get_key(), list[size() - 2]);
+          if (size() <= 0) crash("Erase element in a empty node.");
 
-                    list.erase(list.begin() + index);
-                    if (_type == NodeType::LeafNode) value.erase(value.begin() + index);
-                    else next.erase(next.begin() + index);
-
-                    if (size() < limit && !_is_root) merge();
-          } else {
-                    printf("Erase element in a empty node.\n");
-                    exit(1);
+          if (index == size() - 1 && parent != nullptr) parent->change_key(get_key(), list[size() - 2]);
+          list.erase(list.begin() + index);
+          if (_type == NodeType::LeafNode) value.erase(value.begin() + index);
+          else next.erase(next.begin() + index);
+          if (size() < limit && !_is_root) {
+                    SWLocker l1(this);
+                    merge();
           }
 }
 
 template <typename T, typename V, uint m>
-const bpNode<T, V, m> Node<T, V, m>::split() noexcept {
-          return nullptr;
+const bpNode<T, V, m> Node<T, V, m>::split() noexcept {                         // 分割后需要修改父节点中的Key
+          SWLocker l1(this);          // 上锁
+          auto node = Node::create_node(_type);   // 相同类型的节点
+          // list移动到新节点
+          moveV2V(list, node->list, limit);
+          if (_type == NodeType::LeafNode) moveV2V(value, node->value, limit);
+          else moveV2V(next, node->next, limit);
+          return node;
 }
 
 template <typename T, typename V, uint m>
-void Node<T, V, m>::merge() noexcept {
-          if (before_leaf != nullptr && before_leaf->size() > limit) {
+void Node<T, V, m>::merge() noexcept {            // merge期间会对涉及到的节点上锁，不会触发死锁是因为Merge应该找到可以合并的节点，不会触发split
+          if (before_leaf != nullptr && before_leaf->size() > limit) {          // 取左节点的一个值补充至limit
+                    SWLocker l2(before_leaf);
                     insert((*before_leaf)[before_leaf->size() - 1]);
                     before_leaf->erase(before_leaf->size() - 1);
                     return;
           } 
-          if (next_leaf != nullptr && next_leaf->size() > limit) {
+          if (next_leaf != nullptr && next_leaf->size() > limit) {              // 取右节点的一个值补充至limit
+                    SWLocker l2(next_leaf);
                     insert((*next_leaf)[0]);
                     next_leaf->erase(0);
                     return;
           }
-          if (before_leaf != nullptr) {
+          if (before_leaf != nullptr) {                                         // 与左节点合并，父节点中删除当前节点
+                    SWLocker l2(before_leaf);
                     uint pos = parent->find_key(before_leaf->get_key());
                     parent->change_key(pos, get_key());
                     for (int i = 0; i < size(); ++i) before_leaf->insert((*this)[i]);
@@ -117,7 +122,8 @@ void Node<T, V, m>::merge() noexcept {
                     parent->erase(pos + 1);
                     return;
           }
-          if (next_leaf != nullptr) {
+          if (next_leaf != nullptr) {                                           // 与右节点合并，父节点中删除右节点
+                    SWLocker l2(before_leaf);
                     uint pos = parent->find_key(get_key());
                     parent->change_key(pos, next_leaf->get_key());
                     for (int i = 0; i < next_leaf->size(); ++i) insert((*next_leaf)[i]);
@@ -126,8 +132,25 @@ void Node<T, V, m>::merge() noexcept {
                     parent->erase(pos + 1);
                     return;
           }
-          printf("Call merge in an invalid position.\n");
-          exit(1);
+          crash("Call merge in an invalid position.");                          // 非root节点缺少值时无法合并，触发错误
+}
+
+template <typename T, typename V, uint m>
+void Node<T, V, m>::change_key(const T& old_key, const T& new_key) noexcept {
+                    uint position = 0;
+                    while (position < size() && list[position] < old_key) position++;
+                    if (list[position] != old_key) crash("Can not find old key.");
+                    if (position == size() - 1 && parent != nullptr) parent->change_key(old_key, new_key);
+                    list[position] = new_key;
+}
+
+template <typename T, typename V, uint m>
+void Node<T, V, m>::change_key(const uint pos, const T& new_key) noexcept {
+          if (pos < 0 || pos >= size()) crash("Key position out of bound.");
+          if (pos - 1 >= 0) assert(list[pos - 1] < new_key);                    // Debug
+          if (pos + 1 < size()) assert(list[pos + 1] > new_key);                // Debug
+          if (pos == size() - 1 && parent != nullptr) parent->change_key(list[pos], new_key);
+          list[pos] = new_key;
 }
 
 

@@ -1,6 +1,8 @@
 #include <iostream>
 #include <stdlib.h>
 #include <memory.h>
+#include <shared_mutex>
+#include <cassert>
 
 
 
@@ -14,6 +16,11 @@ template <typename T, typename V, uint m>
 using bpNode = std::shared_ptr<Node<T, V, m>>;
 
 enum class NodeType: uint8_t { LeafNode, InnerNode };
+
+void crash (const std::string& msg) {
+          std::cerr << "Error: " << msg << "\n";
+          exit(1);
+}
 
 template <typename T, typename V, uint m>
 class Node {
@@ -36,20 +43,14 @@ public:
           Node(): _type(NodeType::LeafNode) {
                     if (m <= 0) exit(1); 
                     list.reserve(m);
-                    if (_type == NodeType::LeafNode) {
-                              value.reserve(m);
-                    } else {
-                              next.reserve(m);
-                    }
+                    if (_type == NodeType::LeafNode) value.reserve(m);
+                    else next.reserve(m);
           }
           explicit Node(NodeType new_type): _type(new_type) { 
                     if (m <= 0) exit(1); 
                     list.reserve(m);
-                    if (_type == NodeType::LeafNode) {
-                              value.reserve(m);
-                    } else {
-                              next.reserve(m);
-                    }
+                    if (_type == NodeType::LeafNode) value.reserve(m);
+                    else next.reserve(m);
           }
           ~Node();
           explicit Node(const Node*);
@@ -59,16 +60,19 @@ public:
           void operator=(const Node&&) = delete;
 
           struct RET { 
+                    T x; 
                     struct two4one { V _v; bpNode<T, V, m> _n; } y;
-                    T x; bool _leaf;
+                    bool _leaf;
+                    RET(const T& x, const V& v): x(x) {y._v = v; _leaf = true; }
+                    RET(const T& x, const bpNode<T, V, m>& n): x(x) { y._n = n; _leaf = false; }
           };
           const RET operator[](uint index) const {
                     if (index < 0 || index >= size()) {
                               printf("Outof bound of current node. operator[%d]\n", index);
                               exit(1);
                     }
-                    if (_type == NodeType::LeafNode) return { list[index], value[index], true };
-                    else return { list[index], next[index], false };
+                    if (_type == NodeType::LeafNode) return { list[index], value[index] };
+                    else return { list[index], next[index] };
           }
 
           bool operator==(const Node& node) noexcept { return comp(node, [](const T& _x, const T& _y){ return _x == _y; }); }
@@ -84,15 +88,16 @@ public:
 
           const bpNode<T, V, m> insert(const T& elem, const V& val) noexcept;
           const bpNode<T, V, m> insert(const T& elem, const bpNode<T, V, m>& node) noexcept;
+          const bpNode<T, V, m> insert(const bpNode<T, V, m>& node) noexcept;
           template <typename... _Args>
           const bpNode<T, V, m> insert(const T& elem , const V& val, _Args&&... _args) noexcept {
                     insert(elem, val);
                     return insert(_args...);
           }
+          template <typename... _Args>
+          const bpNode<T, V, m> insert(_Args&&... _args) noexcept { return insert(_args...); }
           const bpNode<T, V, m> insert(const RET& ret) noexcept;
           void erase(const uint32_t index) noexcept;
-          const bpNode<T, V, m> split() noexcept;
-          void merge () noexcept;
 
           /**
            * 一些简单的功能性函数，头文件中被实现
@@ -114,6 +119,8 @@ private:
 
           uint32_t limit = (m + 1) / 2;           // limit为一个非root节点存储的最少内容
                                         // 当内容少于limit时需要合并节点，当内容多出 m 时需要分割节点
+
+          std::shared_mutex mtx;                         // 读写锁，当节点在修改时无法操作当前节点以及父节点
 
           /**
            * 内部使用的功能性函数
@@ -147,6 +154,9 @@ private:
                     // crt_size = std::move(node.crt_size);
           }
 
+          const bpNode<T, V, m> split() noexcept;
+          void merge () noexcept;
+
           /**
            * 重构部分，重构中......
            */
@@ -159,7 +169,7 @@ public:
           friend class BPTree<T, V, m>;
 
           /**
-           * 一致性的静态构造函数，yong
+           * 一致性的静态构造函数，应该减少用户自定义行为，建议的是将这些方法作为唯一的构造方法
            */
 
           static const Node* create_node_ (NodeType type = NodeType::LeafNode) noexcept { return new Node(type); }
@@ -202,6 +212,15 @@ inline bool operator<(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x
 template <typename T, typename V, uint m>
 inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) { return x.operator<=(y); }
 
+template <typename T>
+inline void moveV2V(std::vector<T>& v1, std::vector<T>& v2, size_t start) noexcept {
+          for (
+                    typename std::vector<T>::iterator iter = v1.begin() + start;
+                    iter != v1.end();
+                    iter++
+          ) v2.push_back(std::move(*iter));
+          for (int i = start; i < v1.size(); ++i) v1.pop_back();
+}
 
 /**
  * B+ Tree Entity
