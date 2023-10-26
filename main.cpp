@@ -30,7 +30,7 @@ void node_test() {
 
 void bp_test1() {
           BPTree<std::string, double, 3> bp;
-          int pos = 200;
+          int pos = 2000;
           for (int i = 0; i < pos; ++i) {
                     printf("Insert %d\n", i);
                     bp.insert(std::to_string(i), i);
@@ -41,10 +41,10 @@ void bp_test1() {
 }
 
 #define NSORTED_
-#define DEBUG_
+#define DEBUG
 void bp_test2() {
           BPTree<int, double, 1000> bp1;
-          int pos = 1000000;            // 100万条数据插入
+          int pos = 100;            // 10Million?
           #ifdef DEBUG
           // bp1.insert(std::to_string(1), 1);
           #endif
@@ -64,13 +64,13 @@ void bp_test2() {
                     #endif
 
                     // #ifdef DEBUG
-                    // display(bp1.serialize());
+                    display(bp1.serialize());
                     // bp1.check();
                     // #endif
           }
           #ifdef DEBUG
           bp1.insert(pos, pos);
-          bp1.check();
+          // bp1.check();
           #endif
 }
 
@@ -91,7 +91,7 @@ int main() {
           // element_test();
           // node_test();
           // node_test2();
-          bp_test2();
+          bp_test1();
           // bp_test2();
           // bp_test3();
 }

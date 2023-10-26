@@ -31,7 +31,7 @@ public:
           typedef struct { const Node *left, *right; } Deliver;
 
           /**
-           * 作为一个节点的基本信息，链接信息以及类型信息
+           * Basic arguments
            */
 
           Node *next_leaf = nullptr, *before_leaf = nullptr, *parent = nullptr;
@@ -40,7 +40,7 @@ public:
 
 
           /**
-           * 类型的基础功能性函数
+           * Basic functions
            */
 
           Node(): _type(NodeType::LeafNode) {
@@ -86,7 +86,7 @@ public:
           bool operator<(const Node& node) noexcept { return comp(node, [](const T& _x, const T& _y){ return _x < _y; }); }
 
           /**
-           * 一些主要的功能性函数
+           * Some main functions
            */
 
           const bpNode<T, V, m> insert(const T& elem, const V& val) noexcept;
@@ -104,7 +104,7 @@ public:
           void erase(const uint32_t index) noexcept;
 
           /**
-           * 一些简单的功能性函数，头文件中被实现
+           * Sample tool functions
            */
 
           inline constexpr int find_key(const T& elem) const noexcept { for (int i = 0; i < size(); ++i) if (list[i] == elem) return i; return -1; }
@@ -114,20 +114,20 @@ public:
 private:
           
           /**
-           * 作为节点的内容信息
+           * Node contents
            */
 
-          std::vector<T> list;                    // 对应存储的Key信息
-          std::vector<V> value;                   // 节点对应的值信息，被Key索引到的Value，当节点类型是LeafNode时被使用
-          std::vector<bpNode<T, V, m>> next;      // 下层节点的信息，当节点类型为InnerNode时被使用
+          std::vector<T> list;                    // Key
+          std::vector<V> value;                   // Values which are stored
+          std::vector<bpNode<T, V, m>> next;      // Next node if current node is InnerNode
 
-          uint32_t limit = (m + 1) / 2;           // limit为一个非root节点存储的最少内容
-                                        // 当内容少于limit时需要合并节点，当内容多出 m 时需要分割节点
+          uint32_t limit = (m + 1) / 2;           // limit, the minmum number content stored in current node
+                                        // when size() < limit, current node need to be merged
 
-          // std::shared_mutex mtx;                         // 读写锁，当节点在修改时无法操作当前节点以及父节点
+          // std::shared_mutex mtx;                         // RWLock
 
           /**
-           * 内部使用的功能性函数
+           * Inner tool functions
            */
 
           void _force_del(const uint32_t index) noexcept = delete;
@@ -161,10 +161,6 @@ private:
           const bpNode<T, V, m> split() noexcept;
           void merge () noexcept;
 
-          /**
-           * 重构部分，重构中......
-           */
-
           template <typename ValueType>
           const bpNode<T, V, m> insert_(const T& key, ValueType&& value, bool type) noexcept;
           void change_key(const T& old_key, const T& new_key) noexcept;
@@ -175,7 +171,7 @@ public:
           friend class BPTree<T, V, m>;
 
           /**
-           * 一致性的静态构造函数，应该减少用户自定义行为，建议的是将这些方法作为唯一的构造方法
+           * It is advisable to use these functions to create a new node
            */
 
           static const Node* create_node_ (NodeType type = NodeType::LeafNode) noexcept { return new Node(type); }
@@ -232,10 +228,10 @@ inline bool operator<=(const Node<T, V, m>& x, const Node<T, V, m>& y) noexcept 
 
 /**
  * B+ Tree Entity
- * B+树模版参数
- *        T为键值类型，需要能够比较大小，拥有operator>和operator<
- *        V为值类型，叶子节点存储的类型
- *        m为B+树莓个节点的最大容纳数量，非root节点的容量为[(m + 1) / 2, m]
+ * B+ Tree Template arguments
+ *        T: Key type
+ *        V: Value type
+ *        m: Maxmun number stored, limit will be [(m + 1) / 2, m]
  */
 
 template <typename T, typename V, uint m>
@@ -265,13 +261,7 @@ public:
           const V* find(const T& key) const noexcept ;
           V& operator[](const T& key) const noexcept ; 
 
-          /**
-           * 如果存在则设置，如果不存在则返回false
-           */
           bool tombstone(const T& key);
-          /**
-           * 如果存在则删除，如果不存在则返回false
-           */
           bool erase(const T& key);
           bool exist(const T& key);
 
