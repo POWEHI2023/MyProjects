@@ -1,2 +1,0 @@
-
-struct default_iterator {};
