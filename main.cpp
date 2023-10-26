@@ -1,6 +1,5 @@
-#include "BPTree/bp.cpp"
+#include "source/BPlusTree/bp.h"
 
-#include <gtest/gtest.h>
 
 template <typename T>
 void display(const std::vector<T>& arr) {
@@ -41,10 +40,10 @@ void bp_test1() {
 }
 
 #define NSORTED_
-#define DEBUG
+#define DEBUG_
 void bp_test2() {
-          BPTree<int, double, 1000> bp1;
-          int pos = 100;            // 10Million?
+          BPTree<int, double, 10> bp1;
+          int pos = 10000000;            // 10Million?
           #ifdef DEBUG
           // bp1.insert(std::to_string(1), 1);
           #endif
@@ -63,10 +62,10 @@ void bp_test2() {
                     // assert(bp1[i] == i);
                     #endif
 
-                    // #ifdef DEBUG
+                    #ifdef DEBUG
                     display(bp1.serialize());
                     // bp1.check();
-                    // #endif
+                    #endif
           }
           #ifdef DEBUG
           bp1.insert(pos, pos);
@@ -86,12 +85,17 @@ void bp_test3() {
           }
 }
 
+
+#define _BP_TEST_
+#define _NODE_TEST_
 int main() {
-          //tree_test();
-          // element_test();
-          // node_test();
-          // node_test2();
+          #ifndef _NODE_TEST
+          node_test();
+          #endif
+
+          #ifndef _BP_TEST_
           bp_test1();
-          // bp_test2();
-          // bp_test3();
+          bp_test2();
+          bp_test3();
+          #endif
 }
