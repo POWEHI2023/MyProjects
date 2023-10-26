@@ -57,8 +57,9 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const V& val) noexcep
                     return parent != nullptr ? parent->insert(ret->get_key(), ret) : ret;
           }
           // size < m 有剩余空间
-          uint position = 0;
-          while (position < size() && list[position] < elem) position++;
+          // uint position = 0;
+          // while (position < size() && list[position] < elem) position++;
+          int32_t position = std::max(pfind(elem), 0);
           list.insert(list.begin() + position, elem);
           value.insert(value.begin() + position, val);
           // 当改变的是最后一个元素，需要修改上层的Key为新Key
@@ -87,8 +88,9 @@ const bpNode<T, V, m> Node<T, V, m>::insert(const T& elem, const bpNode<T, V, m>
                     return parent != nullptr ? parent->insert(ret->get_key(), ret) : ret;
           }
           // size < m 有剩余空间
-          uint position = 0;
-          while (position < size() && list[position] < elem) position++;
+          // uint position = 0;
+          // while (position < size() && list[position] < elem) position++;
+          int32_t position = std::max(pfind(elem), 0);
           list.insert(list.begin() + position, elem);
           next.insert(next.begin() + position, node);
           if (position > 0) {                               // Before <-> Next & Node
@@ -199,6 +201,20 @@ void Node<T, V, m>::change_key(const int pos, const T& new_key, int) noexcept {
 }
 
 template <typename T, typename V, uint m>
+int32_t Node<T, V, m>::pfind(const T& key) const noexcept {
+          if (size() == 0) return -1;
+          
+          int left = 0, right = list.size() - 1, mid;
+          while (left <= right) {
+                    mid = (right + left) / 2;
+                    if (list[mid] == key) return mid;
+                    if (list[mid] < key) left = mid + 1;
+                    else right = mid - 1;
+          }
+          return left;
+}
+
+template <typename T, typename V, uint m>
 void Node<T, V, m>::check() {
           if (_type == NodeType::LeafNode) assert(list.size() == value.size());
           else assert(list.size() == next.size());
@@ -209,7 +225,8 @@ void Node<T, V, m>::check() {
           }
 
           if (_type == NodeType::InnerNode)
-          for (auto each : next) {
+          for (int i = 0; i < next.size(); ++i) {
+                    Node<T, V, m>* each = next[i].get();
                     assert(each->parent == this);
                     each->check();
           }
@@ -238,7 +255,6 @@ std::vector<V> BPTree<T, V, m>::serialize() const {
           }
           return std::move(ret);
 }
-
 template <typename T, typename V, uint m>
 void BPTree<T, V, m>::insert(const T& key, const V& val) {
           Node<T, V, m>* cpy = root.get();
@@ -258,6 +274,17 @@ void BPTree<T, V, m>::insert(const T& key, const V& val) {
                     root = std::move(new_root);
           }
 }
+template <typename T, typename V, uint m>
+const V* BPTree<T, V, m>::find(const T& key) const noexcept {
+          Node<T, V, m>* cpy = root.get();
+          if (key > cpy->list.back()) return nullptr;
+          while (cpy->_type != NodeType::LeafNode) 
+                    cpy = cpy->next[cpy->pfind(key)].get();
+          int32_t pos = cpy->pfind(key);
+          return cpy->list[pos] == key ? &(cpy->value[pos]) : nullptr;
+}
+template <typename T, typename V, uint m>
+V& BPTree<T, V, m>::operator[](const T& key) const noexcept { return *(const_cast<V*>(find(key))); }
 
 template <typename T, typename V, uint m>
 bool BPTree<T, V, m>::erase(const T& key) {

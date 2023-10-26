@@ -169,6 +169,8 @@ private:
           const bpNode<T, V, m> insert_(const T& key, ValueType&& value, bool type) noexcept;
           void change_key(const T& old_key, const T& new_key) noexcept;
           void change_key(const int pos, const T& new_key, int) noexcept;
+
+          inline int32_t pfind(const T& key) const noexcept;
 public:
           friend class BPTree<T, V, m>;
 
@@ -259,6 +261,9 @@ public:
 
           bool is_empty() const noexcept;
           void insert(const T& key, const V& val);
+
+          const V* find(const T& key) const noexcept ;
+          V& operator[](const T& key) const noexcept ; 
 
           /**
            * 如果存在则设置，如果不存在则返回false
