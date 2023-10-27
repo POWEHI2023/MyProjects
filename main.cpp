@@ -28,8 +28,9 @@ void node_test() {
 }
 
 void bp_test1() {
-          BPTree<std::string, double, 3> bp;
+          BPTree<std::string, double> bp;
           int pos = 1000;
+          printf("BPlusTree-Test1: insert %d data (may need several seconds)\n", pos);
           for (int i = 0; i < pos; ++i) {
                     printf("Insert %d\n", i);
                     bp.insert(std::to_string(i), i);
@@ -44,7 +45,7 @@ void bp_test1() {
 void bp_test2() {
           BPTree<int, double, 10> bp1;
           int pos = 10000000;            // 10Million?
-          printf("BPlusTree-Test2: insert %d data (may need some seconds)\n", pos);
+          printf("BPlusTree-Test2: insert %d data (may need several seconds)\n", pos);
           #ifdef DEBUG
           // bp1.insert(std::to_string(1), 1);
           #endif
@@ -75,9 +76,10 @@ void bp_test2() {
 }
 
 void bp_test3() {
-          BPTree<std::string, double, 10> bp1;
+          BPTree<std::string, double, 3> bp1;
           int pos = 10;
-
+          bp1.insert(std::to_string(1), 1);
+          printf("BPlusTree-Test3: insert %d data (may need several seconds)\n", pos);
           for (int i = 0; i < pos; ++i) {
                     printf("%d\n", i);
                     bp1.insert(std::to_string(i), i);
@@ -97,6 +99,6 @@ int main() {
           #ifndef _BP_TEST_
           bp_test1();
           bp_test2();
-          // bp_test3();
+          bp_test3();
           #endif
 }

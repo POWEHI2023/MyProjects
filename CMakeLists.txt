@@ -88,11 +88,11 @@ add_subdirectory(source)
 #
 # LINK AND GENERATE EXECUTABLE
 #
-link_directories(${LIBRARY_OUTPUT_PATH})
+# link_directories(${LIBRARY_OUTPUT_PATH})
 # execute_process(COMMAND pwd)
 # file(GLOB_RECURSE c_files *.cpp *.c)
 # link_directories(${PROJECT_BINARY_DIR}/lib)
-# add_executable(ProjectMain main.cpp)
+add_executable(ProjectMain main.cpp)
 # target_link_libraries(ProjectMain add_bplib_static add_bstlib_static)
 
 
