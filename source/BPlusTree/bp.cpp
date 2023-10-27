@@ -1,8 +1,7 @@
 #include "bp.h"
-#include "../locker.h"
 
-#include <unordered_map>
-#include <stack>
+#define BPT
+#ifndef BPT_
 
 template <typename T, typename V, uint m>
 Node<T, V, m>::Node(const Node* node): _type(node->_type), next_leaf(node->next_leaf), before_leaf(node->before_leaf), parent(node->parent)  { copy_list(*node); }
@@ -338,3 +337,5 @@ void BPTree<T, V, m>::check() {
                     exit(1);
           }
 }
+
+#endif

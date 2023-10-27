@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-project(CPP_Projects VERSION 1.0.0)
+project(CPP_Projects)
 
+# set(CMAKE_C_COMPILER "clang++")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(NOT CMAKE_BUILD_TYPE)
@@ -14,7 +15,7 @@ endif()
 #
 # SOME COMPILER CONFIG
 #
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -c")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wunused-command-line-argument")
 string(TIMESTAMP COMPILE_TIME %Y%m%d-%H%M%S)
@@ -42,18 +43,18 @@ message(STATUS "CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin")
 
 
 
-#include(FetchContent)
-#FetchContent_Declare(
-#  googletest
-#  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-#)
+# include(FetchContent)
+# FetchContent_Declare(
+#   googletest
+#   URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+# )
 
-#set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-#FetchContent_MakeAvailable(googletest)
+# set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+# FetchContent_MakeAvailable(googletest) 
 
-#enable_testing()
+# enable_testing()
 
-#include(GoogleTest)
+# include(GoogleTest)
 
 
 
@@ -87,13 +88,12 @@ add_subdirectory(source)
 #
 # LINK AND GENERATE EXECUTABLE
 #
-link_directories(${PROJECT_BINARY_DIR}/lib)
-execute_process(COMMAND pwd)
+link_directories(${LIBRARY_OUTPUT_PATH})
+# execute_process(COMMAND pwd)
 # file(GLOB_RECURSE c_files *.cpp *.c)
 # link_directories(${PROJECT_BINARY_DIR}/lib)
-add_executable(ProjectMain ./main.cpp)
-target_link_libraries(ProjectMain BPlusTree BinarySearchTree)
-# target_link_libraries(ProjectMain add_bplib_shared)
+# add_executable(ProjectMain main.cpp)
+# target_link_libraries(ProjectMain add_bplib_static add_bstlib_static)
 
 
 
@@ -120,4 +120,4 @@ endfunction()
 CheckAndCreateDir(${CMAKE_SOURCE_DIR}/output/bin)
 CheckAndCreateDir(${CMAKE_SOURCE_DIR}/output/lib)
 CheckAndCreateDir(${CMAKE_SOURCE_DIR}/output/include)
-install(TARGETS ProjectMain RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/bin)
+# install(TARGETS ProjectMain RUNTIME DESTINATION ${CMAKE_SOURCE_DIR}/bin)

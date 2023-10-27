@@ -1,6 +1,8 @@
 #ifndef BPLUSTREE_
 #define BPLUSTREE_
 
+#pragma once
+
 #include <iostream>
 #include <stdlib.h>
 #include <memory>
@@ -8,6 +10,10 @@
 #include <cassert>
 #include <vector>
 #include <functional>
+#include <unordered_map>
+#include <stack>
+
+#include "../locker.h"
 
 
 template <typename T, typename V, uint m = 5>

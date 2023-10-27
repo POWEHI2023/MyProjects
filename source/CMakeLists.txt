@@ -9,7 +9,7 @@ foreach(sub ${ALL_SUB})
   set(CRT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/${sub})
   if(IS_DIRECTORY ${CRT_DIR})
     message(STATUS "add subdirectory ${sub}")
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${sub})
+    add_subdirectory(${sub})
   endif()
 endforeach()
 
