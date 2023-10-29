@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <stdlib.h>
-#include <memory.h>
 #include <stack>
 #include <vector>
 #include <functional>
@@ -31,14 +30,11 @@ public:
                     iterator(const iterator&& iter);
                     void operator=(const iterator& iter);
                     void operator=(const iterator&& iter);
-                    // 
-                    bool operator==(const iterator& iter) const noexcept
-                    { return this->crt == iter.crt && this->end == iter.end; }
-                    bool operator==(const nullptr_t v) const noexcept
-                    { return this->crt == v; }
-                    bool operator!=(const iterator& iter) const noexcept
-                    { return !this->operator==(iter); }
-                    // 
+
+                    bool operator==(const iterator& iter) const noexcept { return this->crt == iter.crt && this->end == iter.end; }
+                    bool operator==(const nullptr_t v) const noexcept { return this->crt == v; }
+                    bool operator!=(const iterator& iter) const noexcept { return !this->operator==(iter); }
+
                     iterator& operator++() noexcept;
                     const iterator operator++(int) noexcept;
                     iterator& operator--() noexcept;
@@ -51,13 +47,10 @@ public:
                     BSTNode<Type>* operator->() const noexcept;
                     BSTNode<Type>& operator*() const noexcept;
 
-                    bool destroyed() const
-                    { return iter_destroyed || crt->destroyed; }
+                    bool destroyed() const noexcept { return iter_destroyed || crt->destroyed; }
           private:
                     BSTNode<Type>* crt;
-                    bool end = false;
-
-                    bool iter_destroyed = false;
+                    bool end = false, iter_destroyed = false;
           public:          
                     friend BSTTree;
           };
@@ -74,35 +67,31 @@ public:
 
           virtual ~BSTTree();
 
-          bool operator==(const BSTTree& bst);
+          bool operator==(const BSTTree& bst) noexcept;
 
-          // Waiting......
-          // Base insert
-          virtual void insert(const Type& elem);
+          virtual void insert(const Type& elem) noexcept;
           template <typename... _Args>
-          void insert(const Type& first, const _Args&... others) {
+          void insert(const Type& first, const _Args&... others) noexcept {
                     insert(first);
                     insert(others...);
           }
 
-          virtual void insert(const Type&& elem);
+          virtual void insert(const Type&& elem) noexcept;
           template <typename... _Args>
-          void insert(const Type&& first, _Args&&... others) {
+          void insert(const Type&& first, _Args&&... others) noexcept {
                     insert(std::move(first));
                     insert(std::forward(others...));
           }
 
-          // Rval insert
-          // bool insert(const Type&& elem);
-          bool erase(const iterator& iter);
-          const iterator find(const Type& elem) const;
-          iterator begin() const;
-          iterator end() const;
+          bool erase(const iterator& iter) noexcept;
+          const iterator find(const Type& elem) const noexcept;
+          iterator begin() const noexcept;
+          iterator end() const noexcept;
 
-          const std::vector<Type> to_array() const;
-          const std::vector<Type> serilize() const;
+          const std::vector<Type> to_array() const noexcept;
+          const std::vector<Type> serilize() const noexcept;
 
-          bool customize(std::function<bool(const Type&, const Type&)> f);
+          bool customize(std::function<bool(const Type&, const Type&)> f) noexcept;
 private:
           // Support for altanative customized function
           std::function<bool(const Type&, const Type&)> fn;
@@ -115,34 +104,28 @@ private:
           bool modified = false;
           
           // Tool function
-          virtual bool erase_root(typename BSTNode<Type>::node& root);
+          virtual bool erase_root(typename BSTNode<Type>::node& root) noexcept;
 public:
 };
 
 template <typename T>
-inline decltype(auto) operator+(const typename BSTTree<T>::iterator iter, int x) {
+inline decltype(auto) operator+(const typename BSTTree<T>::iterator iter, int x) noexcept {
           return std::forward(iter + x);
 }
 
-
-
 template <typename T>
-inline bool node_exist(typename BSTNode<T>::node& node);
+inline bool node_exist(typename BSTNode<T>::node& node) noexcept;
 
 template <typename T>
-inline bool operator<(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) 
-{ return left->element < right->element; }
+inline bool operator<(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) noexcept { return left->element < right->element; }
 template <typename T>
-inline bool operator<=(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) 
-{ return left->element <= right->element; }
+inline bool operator<=(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) noexcept { return left->element <= right->element; }
 template <typename T>
-inline bool operator>(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) 
-{ return left->element > right->element; }
+inline bool operator>(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) noexcept { return left->element > right->element; }
 template <typename T>
-inline bool operator>=(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) 
-{ return left->element >= right->element; }
+inline bool operator>=(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) noexcept { return left->element >= right->element; }
 template <typename T>
-inline bool operator==(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) {
+inline bool operator==(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) noexcept {
           if (left.get() == nullptr && right.get() == nullptr) return true;
 
           if (left.get() != nullptr && right.get() != nullptr) {
@@ -161,8 +144,7 @@ inline bool operator==(const typename BSTNode<T>::node left, const typename BSTN
           } else return false;   
 }
 template <typename T>
-inline bool operator!=(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) 
-{ return !operator==(left, right); }
+inline bool operator!=(const typename BSTNode<T>::node left, const typename BSTNode<T>::node right) noexcept { return !operator==(left, right); }
 
 template <typename Type>
 class BSTNode {
@@ -180,11 +162,11 @@ public:
           void operator=(const BSTNode<Type>& node);
           void operator=(const BSTNode<Type>&& rnode);
 
-          static BSTNode* create_node_(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
-          static BSTNode* create_node_(const Type&& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
-          static void release_node(const BSTNode<Type>* node);
-          static const std::shared_ptr<BSTNode<Type>> create_node(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
-          static const std::shared_ptr<BSTNode<Type>> create_node(const Type&& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr);
+          static BSTNode* create_node_(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr) noexcept;
+          static BSTNode* create_node_(const Type&& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr) noexcept;
+          static void release_node(const BSTNode<Type>* node) noexcept;
+          static const std::shared_ptr<BSTNode<Type>> create_node(const Type& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr) noexcept;
+          static const std::shared_ptr<BSTNode<Type>> create_node(const Type&& relem, const BSTNode<Type>* left = nullptr, const BSTNode<Type>* right = nullptr) noexcept;
 
           Type element;
           node left = nullptr, right = nullptr;
@@ -203,7 +185,7 @@ using bstNode = typename BSTNode<T>::node;
 
 
 template <typename T>
-inline bool node_exist(typename BSTNode<T>::node& node) { return node != nullptr && !node->destroyed; }
+inline bool node_exist(typename BSTNode<T>::node& node) noexcept { return node != nullptr && !node->destroyed; }
 template <typename Type>
 BSTNode<Type>::BSTNode( const Type& elem, const BSTNode* left, const BSTNode* right): 
 element(elem), left(const_cast<BSTNode<Type>*>(left)), right(const_cast<BSTNode<Type>*>(right)) { }
@@ -230,19 +212,19 @@ void BSTNode<Type>::operator=(const BSTNode&& node) {
           this->right = std::move(node.right);
 }
 template <typename Type>
-BSTNode<Type>* BSTNode<Type>::create_node_(const Type& relem, const BSTNode* left, const BSTNode* right) 
+BSTNode<Type>* BSTNode<Type>::create_node_(const Type& relem, const BSTNode* left, const BSTNode* right) noexcept 
 { return new BSTNode(relem, left, right); }
 template <typename Type>
-BSTNode<Type>* BSTNode<Type>::create_node_(const Type&& relem, const BSTNode* left, const BSTNode* right) 
+BSTNode<Type>* BSTNode<Type>::create_node_(const Type&& relem, const BSTNode* left, const BSTNode* right) noexcept 
 { return new BSTNode(std::move(relem), left, right); }
 template <typename Type>
-const std::shared_ptr<BSTNode<Type>> BSTNode<Type>::create_node(const Type& relem, const BSTNode<Type>* left, const BSTNode<Type>* right) 
+const std::shared_ptr<BSTNode<Type>> BSTNode<Type>::create_node(const Type& relem, const BSTNode<Type>* left, const BSTNode<Type>* right) noexcept 
 { return std::shared_ptr<BSTNode<Type>>(BSTNode<Type>::create_node_(relem, left, right), BSTNode<Type>::release_node); }
 template <typename Type>
-const std::shared_ptr<BSTNode<Type>> BSTNode<Type>::create_node(const Type&& relem, const BSTNode<Type>* left, const BSTNode<Type>* right) 
+const std::shared_ptr<BSTNode<Type>> BSTNode<Type>::create_node(const Type&& relem, const BSTNode<Type>* left, const BSTNode<Type>* right) noexcept 
 { return std::shared_ptr<BSTNode<Type>>(BSTNode<Type>::create_node_(std::move(relem), left, right), BSTNode<Type>::release_node); }
 template <typename Type>
-void BSTNode<Type>::release_node(const BSTNode* bst) { delete bst; }
+void BSTNode<Type>::release_node(const BSTNode* bst) noexcept { delete bst; }
 template <typename Type>
 BSTNode<Type>::~BSTNode() { 
           left = nullptr; right = nullptr;
@@ -289,14 +271,14 @@ void BSTTree<T>::operator=(const BSTTree&& bst) {
           this->modified = std::move(bst.modified);
 }
 template <typename T>
-bool BSTTree<T>::operator==(const BSTTree& bst) { return root == bst.root; }
+bool BSTTree<T>::operator==(const BSTTree& bst) noexcept { return root == bst.root; }
 
 /**
  * Functional part for BSTTree
  */
 
 template <typename T>
-const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) const{
+const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) const noexcept {
           BSTNode<T>* node = root.get();
           while (node)
           if (fn(node->element, elem)) node = node->left != nullptr ? node->left.get() : nullptr;
@@ -306,7 +288,7 @@ const typename BSTTree<T>::iterator BSTTree<T>::find(const T& elem) const{
 }
 
 template <typename T>
-const std::vector<T> BSTTree<T>::serilize() const {
+const std::vector<T> BSTTree<T>::serilize() const noexcept {
           std::vector<T> ret;
           std::stack<typename BSTNode<T>::node> s; s.push(root);
           while (s.top()->left != nullptr && !s.top()->left->destroyed) { s.push(s.top()->left); }
@@ -322,7 +304,7 @@ const std::vector<T> BSTTree<T>::serilize() const {
 }
 
 template <typename T>
-bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) { 
+bool BSTTree<T>::customize(std::function<bool(const T&, const T&)> f) noexcept { 
           this->fn = f; 
           if (root == nullptr || (root->left == nullptr && root->right == nullptr)) return true;
           std::vector<T> arr; std::vector<BSTNode<T>*> s1;
@@ -427,7 +409,7 @@ BSTNode<T>* BSTTree<T>::iterator::operator->() const  noexcept { return crt; }
 template <typename T>
 BSTNode<T>& BSTTree<T>::iterator::operator*() const  noexcept { return *crt; }
 template <typename T>
-void BSTTree<T>::insert(const T& elem) {
+void BSTTree<T>::insert(const T& elem) noexcept {
           if (root == nullptr) {
                     root = BSTNode<T>::create_node(elem);
                     this->head = root.get();
@@ -477,15 +459,15 @@ void BSTTree<T>::insert(const T& elem) {
           }
 }
 template <typename T>
-typename BSTTree<T>::iterator BSTTree<T>::begin() const { return iterator(this->head); }
+typename BSTTree<T>::iterator BSTTree<T>::begin() const noexcept { return iterator(this->head); }
 template <typename T>
-typename BSTTree<T>::iterator BSTTree<T>::end() const {  
+typename BSTTree<T>::iterator BSTTree<T>::end() const noexcept {  
           iterator iter(this->tail);
           iter++;
           return std::move(iter);
 }
 template <typename T>
-const std::vector<T> BSTTree<T>::to_array() const {
+const std::vector<T> BSTTree<T>::to_array() const noexcept {
           std::vector<T> ret;
           BSTNode<T> *start = this->head;
           while (start != nullptr)  {
@@ -501,7 +483,7 @@ const std::vector<T> BSTTree<T>::to_array() const {
  */
 
 template <typename T>
-bool BSTTree<T>::erase (const iterator& iter) {
+bool BSTTree<T>::erase (const iterator& iter) noexcept {
           if (iter.end == true || iter.destroyed()) return false;
           typedef BSTNode<T>* bn;
 
@@ -528,7 +510,7 @@ bool BSTTree<T>::erase (const iterator& iter) {
 }
 
 template <typename T>
-bool BSTTree<T>::erase_root (bstNode<T>& root) {
+bool BSTTree<T>::erase_root (bstNode<T>& root) noexcept {
           auto b2i = [&](bool b) -> decltype(auto) { return b ? 0x01 : 0x00; };
           typedef BSTNode<T>* bn;
 
@@ -607,7 +589,7 @@ bool BSTTree<T>::erase_root (bstNode<T>& root) {
 }
 
 template <typename T>
-void BSTTree<T>::insert(const T&& elem) {
+void BSTTree<T>::insert(const T&& elem) noexcept {
           if (root == nullptr) {
                     root = BSTNode<T>::create_node(std::move(elem));
                     this->head = root.get();

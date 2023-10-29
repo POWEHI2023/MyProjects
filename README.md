@@ -13,7 +13,7 @@ int main(int args, char ** argv) {
      * BPTree<KeyType, ValueType, NodeSize> bptree;
      * During this declaration
      *      KeyType: Key type which must can be compared, 
-     *          operation< & operation> implimented in this type
+     *          operation< & operation> implemented in this type
      *      ValuType: Value type, any type
      *      NodeSize: unsigned 32bite integer, 
      *          The maximum Key inserted into one node

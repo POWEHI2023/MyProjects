@@ -309,7 +309,7 @@ Node<T, V, m>::~Node() {
 }
 
 /**
- * Basic function implimentation
+ * Basic function implementation
  *        insert / erase
  *        split / merge
  */
