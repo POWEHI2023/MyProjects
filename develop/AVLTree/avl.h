@@ -1,9 +1,11 @@
 #ifndef AVLENTITY_
 #define AVLENTITY_
 
+#include <iostream>
 #include <memory>
 #include <functional>
 #include <cmath>
+#include <cassert>
 
 namespace AVL {
 
@@ -57,9 +59,6 @@ struct AVLNode {
           void add1layer() noexcept {
                     int ld = left_deep();
                     int rd = right_deep();
-
-                    if ((1 + max(ld, rd)) == deep_) return;
-                    
                     deep_ = (1 + max(ld, rd));
                     if (abs(ld - rd) <= 1) goto RET;
 
@@ -87,35 +86,49 @@ struct AVLNode {
                     smart_avl_node<ValueType> nr = right_, nl = smart_avl_node<ValueType>(new AVLNode(this));
                     nr->llink_ = get_origin_p(nl);
                     if (nl->rlink_ == get_origin_p(nr)) nl->rlink_ = this;
-
+                    if (llink_ != nullptr) llink_->rlink_ = get_origin_p(nl);
                                                   deep_ = 1 + max(left_deep(), right_->left_deep());
                                                   nr->deep_ = 1 + max(deep_, nr->right_deep());
+                    nl->right_ = nr->left_;    
+                                                  if (nl->right_ != nullptr) nl->right_->parent_ = get_origin_p(nl);
+                    nr->left_ = nl;               
+                                                  nl->deep_ = 1 + max(nl->left_deep(), nl->right_deep());
 
-                    nl->right_ = nr->left_;       if (nr->left_ != nullptr) nr->left_->parent_ = get_origin_p(nl->right_);
-                    nr->left_ = nl;               nl->parent_ = get_origin_p(nr->left_);
-                    nr->parent_ = parent_;        
+                                                  if (nl->left_ != nullptr) nl->left_->parent_ = get_origin_p(nl);
+                                                  if (nr->left_ != nullptr) nr->left_->parent_ = get_origin_p(nl); 
 
-                    if (nr->right_ != nullptr && nr->right_->llink_ == get_origin_p(nr)) nr->right_->llink_ = this;
-                    *this = std::move(nr);
+                    if (nr->right_ != nullptr) {
+                              if (nr->right_->llink_ == get_origin_p(nr)) nr->right_->llink_ = this;
+                              nr->right_->parent_ = this;
+                    }
+                    nr->parent_ = parent_;
+                    *this = nr;
+                    nl->parent_ = this;
           }
           void rotate_right() noexcept {
-                    smart_avl_node<ValueType> nl = left_; left_ = nullptr;
-
+                    smart_avl_node<ValueType> nl = left_; 
                     smart_avl_node<ValueType> nr = smart_avl_node<ValueType>(new AVLNode(this));
-                    nl->rlink_ = get_origin_p(nr);          
-                    if (nr->llink_ == get_origin_p(nl)) nr->llink_ = this;
-
+                    nl->rlink_ = get_origin_p(nr);                              // YES         
+                    if (nr->llink_ == get_origin_p(nl)) nr->llink_ = this;      // 
+                    if (rlink_ != nullptr) rlink_->llink_ = get_origin_p(nr);
                                                   deep_ = 1 + max(right_deep(), nl->right_deep());
                                                   nl->deep_ = 1 + max(deep_, nl->left_deep());
-
+                                                  
                     nr->left_ = nl->right_;       
+                                                  if (nr->left_ != nullptr) nr->left_->parent_ = get_origin_p(nr);
                     nl->right_ = nr;     
-                                                  nr->parent_ = get_origin_p(nl->right_);
-                                                  if (nl->right_ != nullptr) nl->right_->parent_ = get_origin_p(nr->left_);
-                                                  nl->parent_ = parent_;        
+                                                  nr->deep_ = 1 + max(nr->left_deep(), nr->right_deep());
+                                                  // TODO: Parent
+                                                  if (nr->right_ != nullptr) nr->right_->parent_ = get_origin_p(nr);
+                                                  if (nl->right_ != nullptr) nl->right_->parent_ = get_origin_p(nr);
 
-                    if (nl->left_ != nullptr && nl->left_->rlink_ == get_origin_p(nl)) nl->left_->rlink_ = this;
-                                                  *this = std::move(nl);
+                    if (nl->left_ != nullptr) {
+                              if (nl->left_->rlink_ == get_origin_p(nl)) nl->left_->rlink_ = this;
+                              nl->left_->parent_ = this;
+                    }
+                                                  nl->parent_ = parent_;
+                                                  *this = nl;
+                                                  nr->parent_ = this;
           }
 
           void link_left(const smart_avl_node<ValueType>& child) noexcept { link_left(child.get()); }
@@ -153,26 +166,43 @@ struct AVLNode {
                     if (n_->rlink_ != nullptr) n_->rlink_->llink_ = n_->llink_;
           }
 
-          // TODO FUNC
           void unlink_left() noexcept {
                     pthread_rwlock_wrlock(&rwlock);
                     if (left_ == nullptr) goto RET;
+
                     jump_node(left_);
-
-
+                    if (left_->left_ == nullptr) left_ = left_->right_;
+                    else 
+                    if (left_->right_ == nullptr) left_ = left_->left_;
+                    else {
+                              smart_avl_node<ValueType> l = left_->left_;
+                              while (l->right_ != nullptr) l = l->right_;
+                              l->right_ = left_->right_;
+                              left_ = left_->left_;
+                    }
+                    if (left_ != nullptr) left_->parent_ = this;
                     RET:
                     pthread_rwlock_unlock(&rwlock);
+                    add1layer();
           }
-
-          // TODO FUNC
           void unlink_right() noexcept {
                     pthread_rwlock_wrlock(&rwlock);
                     if (right_ == nullptr) goto RET;
+
                     jump_node(right_);
-
-
+                    if (right_->left_ == nullptr) { right_ = right_->right_; }
+                    else 
+                    if (right_->right_ == nullptr) right_ = right_->left_;
+                    else {
+                              smart_avl_node<ValueType> r = right_->right_;
+                              while (r->left_ != nullptr) r = r->left_;
+                              r->left_ = right_->left_;
+                              right_ = right_->right_;
+                    }
+                    if (right_ != nullptr) right_->parent_ = this;
                     RET:
                     pthread_rwlock_unlock(&rwlock);
+                    add1layer();
           }
 
           ValueType operator*() { return value_; }
@@ -183,6 +213,26 @@ struct AVLNode {
                               return right_ == nullptr ? nullptr : right_->find_value(v, fn);
                     else
                               return left_ == nullptr ? nullptr : left_->find_value(v, fn);
+          }
+
+          void check() noexcept {
+                    if (left_ != nullptr) {
+                              assert(left_->value_ <= value_);
+                              assert(left_->parent_ == this);
+
+                              left_->check();
+                    }
+
+                    if (right_ != nullptr) {
+                              assert(right_->value_ >= value_);
+                              assert(right_->parent_ == this);
+
+                              right_->check();
+                    }
+
+                    int ld = left_deep(), rd = right_deep();
+                    assert(deep_ == 1 + max(ld, rd));
+                    assert(abs(ld - rd) <= 1);
           }
 };
 
@@ -233,6 +283,21 @@ template <typename T>
 inline const avl_node<T> get_origin_p(const avl_node<T> n) noexcept { return n; }
 template <typename T>
 inline const avl_node<T> get_origin_p(const smart_avl_node<T> n) noexcept { return n.get(); }
+template <typename T>
+inline const void set_p(smart_avl_node<T>& l, avl_node<T>& r) noexcept { 
+          smart_avl_node<T> n = smart_avl_node<T>(create_node(r->value_)); 
+          n->parent_ = l->parent_;
+          l = std::move(n);
+}
+template <typename T>
+inline const void set_p(smart_avl_node<T>& l, smart_avl_node<T>& r) noexcept { 
+          r->parent_ = l->parent_;
+          l = r; 
+}
+void crash(const std::string& msg) noexcept {
+          std::cout << "Crash: " << msg << "\n";
+          exit(1);
+}
 
 template <
           typename ValueType, 
@@ -241,7 +306,48 @@ template <
           >
 class AVLTree {
 public:
+class iterator {
+          public:
+                    explicit iterator(const avl_node<ValueType>& tar): pos(tar) {}
+                    explicit iterator(const smart_avl_node<ValueType>& tar): pos(tar.get()) {}
+                    iterator(const iterator& iter): pos(iter.pos), is_end_(iter.is_end_) {}
+                    ~iterator() {}
 
+                    const iterator& operator++() const noexcept {
+                              if (is_end_ == true) crash("Can not cal operator++ for an end-iterator!");
+                              if (pos->rlink_ != nullptr) pos = pos->rlink_;
+                              else is_end_ = true;
+                              return *this;
+                    }
+                    const iterator operator++(int) const noexcept {
+                              if (is_end_ == true) crash("Can not cal operator++ for an end-iterator!");
+                              iterator iter(*this);
+                              if (pos->rlink_ != nullptr) pos = pos->rlink_;
+                              else is_end_ = true;
+                              return std::move(iter);
+                    }
+                    const iterator& operator--() const noexcept {
+                              if (is_end_ == true) is_end_ = false;
+                              else if (pos->llink_ != nullptr) pos = pos->llink_;
+                              else crash("Can not call operator-- for an begin-iterator!");
+                              return *this;
+                    }
+                    const iterator operator--(int) const noexcept {
+                              iterator iter(*this);
+                              if (is_end_ == true) is_end_ = false;
+                              else if (pos->llink_ != nullptr) pos = pos->llink_;
+                              else crash("Can not call operator-- for an begin-iterator!");
+                              return std::move(iter);
+                    }
+
+                    // avl_node<ValueType> operator->() noexcept { return pos; }
+                    ValueType operator*() noexcept { return pos->operator*(); }
+                    // const avl_node<ValueType> operator->() const noexcept { return const_cast<const avl_node<ValueType>>(pos); }
+                    const ValueType operator*() const noexcept { return *pos; }
+          private:
+                    mutable avl_node<ValueType> pos = NULL;
+                    mutable bool is_end_ = false;
+          };
 private:
           NodeType root;
           pthread_mutex_t mtx = PTHREAD_MUTEX_INITIALIZER;
@@ -268,6 +374,51 @@ public:
                               else tar = get_origin_p(tar->left_);
                     }
           }
+          void erase(const iterator& iter) noexcept {
+                    if (*iter == root->value_) {
+                              pthread_mutex_lock(&mtx);
+                              if (root->llink_ != nullptr) root->llink_->rlink_ = root->rlink_;
+                              if (root->rlink_ != nullptr) root->rlink_->llink_ = root->llink_;
+                              if (root->left_ != nullptr) 
+                              if (root->right_ == nullptr) set_p(root, root->left_);
+                              else {
+                                        smart_avl_node<ValueType> l = root->left_;
+                                        while (l->right_ != nullptr) l = l->right_;
+                                        l->right_ = root->right_;
+                                        set_p(root, root->left_);
+                              } 
+                              else set_p(root, root->right_);
+                              pthread_mutex_unlock(&mtx);
+                              return;
+                    }
+                    avl_node<ValueType> tar = get_origin_p(root);
+                    while (tar != nullptr) {
+                              if (fn(tar->value_, *iter))
+                              if (tar->right_ != nullptr && tar->right_->value_ == *iter) return tar->unlink_right();
+                              else tar = get_origin_p(tar->right_);
+
+                              else
+                              if (tar->left_ != nullptr && tar->left_->value_ == *iter) return tar->unlink_left();
+                              else tar = get_origin_p(tar->left_);
+                    }
+          }
+
+          iterator find(const ValueType& v) noexcept { return iterator(root->find_value(v, fn)); }
+          const iterator cfind(const ValueType& v) const noexcept { return const_cast<const iterator>(find(v)); }
+          iterator begin() noexcept {
+                    avl_node<ValueType> tar = get_origin_p(root);
+                    while (tar->left_) tar = get_origin_p(tar->left_);
+                    return iterator(tar);
+          }
+
+          iterator end() noexcept {
+                    avl_node<ValueType> tar = get_origin_p(root);
+                    while (tar->right_) tar = get_origin_p(tar->right_);
+                    iterator iter(tar); tar++;
+                    return std::move(tar);
+          }
+
+          void check() noexcept { root->check(); }
 };
 template <
           typename ValueType, 
