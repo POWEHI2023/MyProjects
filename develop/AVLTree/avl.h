@@ -6,6 +6,7 @@
 #include <functional>
 #include <cmath>
 #include <cassert>
+#include <vector>
 
 namespace AVL {
 
@@ -28,30 +29,25 @@ struct AVLNode {
           avl_node<ValueType> llink_ = nullptr, rlink_ = nullptr, parent_ = nullptr;
           uint32_t deep_ = 1;
 
+          static pthread_rwlock_t rotate_lock;
+
           AVLNode(const ValueType& v): value_(v) {}
           ~AVLNode() { pthread_rwlock_destroy(&rwlock); }
 
           AVLNode(const AVLNode& n): 
-          value_(n.value_), llink_(n.llink_), rlink_(n.rlink_), deep_(n.deep_), left_(n.left_), right_(n.right_)
-          /*deep_(1 + max(left_.deep_, right_.deep_))*/, parent_(n.parent_) {}
+          value_(n.value_), llink_(n.llink_), rlink_(n.rlink_), deep_(n.deep_), left_(n.left_), right_(n.right_) , parent_(n.parent_) {}
           AVLNode(const avl_node<ValueType> n): 
-          value_(n->value_), llink_(n->llink_), rlink_(n->rlink_), deep_(n->deep_), left_(n->left_), right_(n->right_)
-          /*deep_(1 + max(left_.deep_, right_.deep_))*/, parent_(n->parent_) {}
+          value_(n->value_), llink_(n->llink_), rlink_(n->rlink_), deep_(n->deep_), left_(n->left_), right_(n->right_), parent_(n->parent_) {}
           void operator=(const AVLNode& n) {
-                    // left_ = nullptr; right_ = nullptr;
                     llink_ = n.llink_; rlink_ = n.rlink_; parent_ = n.parent_;
                     value_ = n.value_; 
                     left_ = std::move(n->left_); right_ = std::move(n->right_);
-                    // deep_ = 1 + max(left_.deep_, right_.deep_);
                     deep_ = n.deep_;
           }
           void operator=(const smart_avl_node<ValueType> n) {
-                    // left_ = nullptr; right_ = nullptr;
                     llink_ = n->llink_; rlink_ = n->rlink_; parent_ = n->parent_;
                     value_ = n->value_; 
-                    
                     left_ = std::move(n->left_); right_ = std::move(n->right_);
-                    // deep_ = 1 + max(left_.deep_, right_.deep_);
                     deep_ = n->deep_;
           }
           operator ValueType() { return value_; }
@@ -65,14 +61,19 @@ struct AVLNode {
                     if (ld > rd)  {
                               int lld = left_->left_ == nullptr ? 0 : left_->left_deep();
                               int lrd = left_->right_ == nullptr ? 0 : left_->right_deep();
+                              pthread_rwlock_wrlock(&rotate_lock);
                               if (lld < lrd) left_->rotate_left();
                               rotate_right();
+                              pthread_rwlock_unlock(&rotate_lock);
                     }
                     else {
                               int rld = right_->left_ == nullptr ? 0 : right_->left_deep();
                               int rrd = right_->right_ == nullptr ? 0 : right_->right_deep();
+
+                              pthread_rwlock_wrlock(&rotate_lock);
                               if (rld > rrd) right_->rotate_right();
                               rotate_left();
+                              pthread_rwlock_unlock(&rotate_lock);
                     }
 
                     RET:
@@ -93,7 +94,6 @@ struct AVLNode {
                                                   if (nl->right_ != nullptr) nl->right_->parent_ = get_origin_p(nl);
                     nr->left_ = nl;               
                                                   nl->deep_ = 1 + max(nl->left_deep(), nl->right_deep());
-
                                                   if (nl->left_ != nullptr) nl->left_->parent_ = get_origin_p(nl);
                                                   if (nr->left_ != nullptr) nr->left_->parent_ = get_origin_p(nl); 
 
@@ -118,7 +118,6 @@ struct AVLNode {
                                                   if (nr->left_ != nullptr) nr->left_->parent_ = get_origin_p(nr);
                     nl->right_ = nr;     
                                                   nr->deep_ = 1 + max(nr->left_deep(), nr->right_deep());
-                                                  // TODO: Parent
                                                   if (nr->right_ != nullptr) nr->right_->parent_ = get_origin_p(nr);
                                                   if (nl->right_ != nullptr) nl->right_->parent_ = get_origin_p(nr);
 
@@ -169,7 +168,6 @@ struct AVLNode {
           void unlink_left() noexcept {
                     pthread_rwlock_wrlock(&rwlock);
                     if (left_ == nullptr) goto RET;
-
                     jump_node(left_);
                     if (left_->left_ == nullptr) left_ = left_->right_;
                     else 
@@ -188,7 +186,6 @@ struct AVLNode {
           void unlink_right() noexcept {
                     pthread_rwlock_wrlock(&rwlock);
                     if (right_ == nullptr) goto RET;
-
                     jump_node(right_);
                     if (right_->left_ == nullptr) { right_ = right_->right_; }
                     else 
@@ -204,7 +201,6 @@ struct AVLNode {
                     pthread_rwlock_unlock(&rwlock);
                     add1layer();
           }
-
           ValueType operator*() { return value_; }
 
           avl_node<ValueType> find_value(const ValueType& v, std::function<bool(const ValueType& x, const ValueType& y)>& fn) noexcept {
@@ -214,7 +210,6 @@ struct AVLNode {
                     else
                               return left_ == nullptr ? nullptr : left_->find_value(v, fn);
           }
-
           void check() noexcept {
                     if (left_ != nullptr) {
                               assert(left_->value_ <= value_);
@@ -234,7 +229,12 @@ struct AVLNode {
                     assert(deep_ == 1 + max(ld, rd));
                     assert(abs(ld - rd) <= 1);
           }
+          void check_serialize() noexcept {
+
+          }
 };
+template <typename ValueType>
+pthread_rwlock_t AVLNode<ValueType>::rotate_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 template<typename T>
 inline bool operator==(const AVLNode<T>& ln, const AVLNode<T>& rn) noexcept { return ln.value_ == rn.value_; }
@@ -419,6 +419,7 @@ public:
           }
 
           void check() noexcept { root->check(); }
+          void check_serialize() noexcept {};
 };
 template <
           typename ValueType, 
