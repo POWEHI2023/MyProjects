@@ -137,6 +137,9 @@ inline bool operator<(const BinarySearchTree_Node_<T>& ln, const BinarySearchTre
 template<typename T>
 inline bool operator<=(const BinarySearchTree_Node_<T>& ln, const BinarySearchTree_Node_<T>& rn) noexcept { return ln.value_ <= rn.value_; }
 
+/**
+ * Transition structure
+ */
 template <typename T>
 struct OpaqueNode_ {
           bst_node<T> node_;
@@ -183,10 +186,9 @@ inline const bst_node<T> get_origin_p(const bst_node<T> n) noexcept { return n; 
 template <typename T>
 inline const bst_node<T> get_origin_p(const smart_bst_node<T> n) noexcept { return n.get(); }
 template <typename T>
-inline const void set_p(bst_node<T>& l, smart_bst_node<T>& r) noexcept { l = r.get(); }
+inline const void set_p(smart_bst_node<T>& l, bst_node<T>& r) noexcept { l = smart_bst_node<T>(create_node(r->value_)); }
 template <typename T>
 inline const void set_p(smart_bst_node<T>& l, smart_bst_node<T>& r) noexcept { l = r; }
-
 
 struct nullfunc_t {
           template<typename F>
