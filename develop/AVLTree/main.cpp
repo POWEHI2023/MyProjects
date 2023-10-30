@@ -74,6 +74,35 @@ void normal_test() {
  *     -11       -2          2
  *                                
  */
+          void normal_test1();
+          normal_test1();
+}
+
+void normal_test1() {
+          AVL::avl<int> tree;
+          tree.insert(8);
+          tree.insert(1);
+          tree.insert(15);
+          tree.insert(-8);
+          tree.insert(23);
+          tree.insert(5);
+          tree.insert(11);
+
+          tree.check();
+/**
+ *                            8
+ *                 1                     15
+ *        -8             5        11            23
+ */
+          tree.erase(tree.find(-8));
+          tree.erase(tree.find(8));
+
+          tree.check();
+/**
+ *                            8
+ *                 1                     15
+ *                       5        11            23
+ */
 }
 
 int main(int args, char ** argv) {

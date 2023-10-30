@@ -80,8 +80,9 @@ struct AVLNode {
                     if (parent_ != nullptr) parent_->add1layer();
           };
 
-          uint32_t right_deep() noexcept { return right_ == nullptr ? 0 : right_->deep_; }
-          uint32_t left_deep() noexcept { return left_ == nullptr ? 0 : left_->deep_; }
+          uint32_t deep() noexcept { return 1 + max(left_deep(), right_deep()); }
+          uint32_t right_deep() noexcept { return right_ == nullptr ? 0 : right_->deep(); }
+          uint32_t left_deep() noexcept { return left_ == nullptr ? 0 : left_->deep(); }
 
           void rotate_left() noexcept {
                     smart_avl_node<ValueType> nr = right_, nl = smart_avl_node<ValueType>(new AVLNode(this));
@@ -176,7 +177,12 @@ struct AVLNode {
                               smart_avl_node<ValueType> l = left_->left_;
                               while (l->right_ != nullptr) l = l->right_;
                               l->right_ = left_->right_;
+                              // parent & deep 
+                              if (l->right_ != nullptr) l->right_->parent_ = get_origin_p(l);
                               left_ = left_->left_;
+
+                              left_->parent_ = this;
+                              l->add1layer();
                     }
                     if (left_ != nullptr) left_->parent_ = this;
                     RET:
@@ -194,7 +200,11 @@ struct AVLNode {
                               smart_avl_node<ValueType> r = right_->right_;
                               while (r->left_ != nullptr) r = r->left_;
                               r->left_ = right_->left_;
+                              if (r->left_ != nullptr) r->left_->parent_ = get_origin_p(r);
                               right_ = right_->right_;
+
+                              right_->parent_ = this;
+                              r->add1layer();
                     }
                     if (right_ != nullptr) right_->parent_ = this;
                     RET:
@@ -291,7 +301,7 @@ inline const void set_p(smart_avl_node<T>& l, avl_node<T>& r) noexcept {
 }
 template <typename T>
 inline const void set_p(smart_avl_node<T>& l, smart_avl_node<T>& r) noexcept { 
-          r->parent_ = l->parent_;
+          if (r != nullptr) r->parent_ = l->parent_;
           l = r; 
 }
 void crash(const std::string& msg) noexcept {
@@ -385,9 +395,14 @@ public:
                                         smart_avl_node<ValueType> l = root->left_;
                                         while (l->right_ != nullptr) l = l->right_;
                                         l->right_ = root->right_;
+                                        if (l->right_ != nullptr) l->right_->parent_ = get_origin_p(l);
                                         set_p(root, root->left_);
+
+                                        l->add1layer();
                               } 
                               else set_p(root, root->right_);
+
+                              root->add1layer();
                               pthread_mutex_unlock(&mtx);
                               return;
                     }
