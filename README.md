@@ -3,7 +3,7 @@
 
 ### Use & Test
 
-How to use these template structure ?
+How to use these template structures ?
 ```C++
 // An example for In-Memory BPlusTree
 #include "bp.h"
@@ -16,7 +16,7 @@ int main(int args, char ** argv) {
      *          operation< & operation> implemented in this type
      *      ValuType: Value type, any type
      *      NodeSize: unsigned 32bite integer, 
-     *          The maximum Key inserted into one node
+     *          The maximum Key number inserted into one node
      *          Default is 5
      */
 
@@ -36,7 +36,7 @@ int main(int args, char ** argv) {
 }
 ```
 
-How to test these template ?
+How to test these templates ?
 ```Shell
 # enter project root directory
 pwd
@@ -52,21 +52,19 @@ cd output/bin
 ```
 
 ### Current data structure :
-1. Binary Search Tree template
+1. Binary Search Tree template (2 editions, source / develop)
 
-    **Note**: BST has not been cearfully inspected, expecially in large data scenario.
+    **Note**: BST has not been cearfully inspected in large data scenario.
 
-2. In-Memory B+ Tree template
+2. In-Memory B+ Tree template (no parallel support, no perfect erase implementation)
 
-    Tested in more than 10 million data.
-
-    TODO: Append functions for parallel operations
+    Tested more than 10 million data.
 
 ***More :*** 
 
-    1. AVL implementation
+    1. AVL implementation (Done)
 
-    2. Jump Table
+    2. Jump Table (TODO)
 
     3. Log Structure Tree
 
@@ -75,5 +73,7 @@ cd output/bin
     5. Storage system prototype
    
     6. CMakeListx.txt
+   
+    7. Red Black Tree (TODO)
 
     Tech: lock-free, mmap
